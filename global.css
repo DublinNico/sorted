@@ -478,7 +478,8 @@
 
     /* The bottom sheet panel itself; slides up from the bottom */
     .modal-container {
-        @apply mt-auto max-h-[85%] rounded-t-3xl bg-background;
+        /* bg-card (#0F4D39) lifts the sheet above the bg-background (#0B3D2E) backdrop */
+        @apply mt-auto max-h-[85%] rounded-t-3xl bg-card;
     }
 
     /* Header row inside the modal: title + close button */
