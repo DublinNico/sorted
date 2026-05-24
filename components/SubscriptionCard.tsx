@@ -68,10 +68,16 @@ const SubscriptionCard = ({
   // Track whether the remote logo URI failed so we can swap in the fallback.
   const [imgError, setImgError] = useState(false);
 
-  // Reset the error flag whenever the icon source changes (e.g. after an edit).
+  // Derive a stable string key from the icon source so the effect dependency
+  // comparison works correctly for both local requires (numbers) and URI objects.
+  const iconKey = typeof icon === "object" && icon !== null && "uri" in icon
+    ? (icon as { uri: string }).uri
+    : String(icon);
+
+  // Reset the error flag when the actual icon source changes.
   useEffect(() => {
     setImgError(false);
-  }, [icon]);
+  }, [iconKey]);
 
   // Detail rows shown only in the expanded state.
   // Each entry is only rendered when it has a non-empty value.
@@ -258,7 +264,7 @@ const SubscriptionCard = ({
             <Text
               style={{
                 fontSize: 16,
-                color: "white",
+                color: colors.primary,
                 fontFamily: "sans-bold",
               }}
             >

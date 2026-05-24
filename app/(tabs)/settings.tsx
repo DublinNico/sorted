@@ -23,6 +23,7 @@ import { useSubscriptionsStore } from "@/store/subscriptionsStore";
 import { useClerk, useUser } from "@clerk/expo";
 import { Ionicons } from "@expo/vector-icons";
 import Constants from "expo-constants";
+import { useRouter } from "expo-router";
 import { ScrollView, Text, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -31,20 +32,23 @@ import { SafeAreaView } from "react-native-safe-area-context";
 /**
  * SettingsItem
  * Metadata for a single tappable row in the settings list.
- * `onPress` is optional — screens for these sub-sections are not yet built.
+ * `route` is optional — only rows with a built screen have a route defined.
  */
 type SettingsItem = {
   icon: React.ComponentProps<typeof Ionicons>["name"];
   label: string;
   description: string;
+  route?: string;
 };
 
 /**
  * SETTINGS_ITEMS
  * Ordered list of settings rows shown between the profile card and app info.
+ * Rows without a `route` are non-functional placeholders until their screens
+ * are built.
  */
 const SETTINGS_ITEMS: SettingsItem[] = [
-  { icon: "person-outline",            label: "Profile",          description: "Manage your account"  },
+  { icon: "person-outline",            label: "Profile",          description: "Manage your account",  route: "/profile" },
   { icon: "notifications-outline",     label: "Notifications",    description: "Billing reminders"    },
   { icon: "card-outline",              label: "Payment Methods",  description: "Manage cards"          },
   { icon: "shield-checkmark-outline",  label: "Security",         description: "Password & privacy"   },
@@ -76,9 +80,10 @@ const getInitials = (
  * Root component for the Settings tab.
  */
 const Settings = () => {
-  const { user }         = useUser();
-  const { signOut }      = useClerk();
+  const { user }          = useUser();
+  const { signOut }       = useClerk();
   const { subscriptions } = useSubscriptionsStore();
+  const router            = useRouter();
 
   // ── Derived values ──────────────────────────────────────────────────────────
 
@@ -128,10 +133,11 @@ const Settings = () => {
         {/* ── Profile card ───────────────────────────────────────────────── */}
         {/*
          * Shows the authenticated user's avatar (gold circle with initials),
-         * display name, and email.  Tapping it will navigate to a Profile
-         * sub-screen when that screen is built.
+         * display name, and email.  Tapping navigates to the Profile screen.
          */}
-        <View
+        <TouchableOpacity
+          onPress={() => router.push("/profile")}
+          activeOpacity={0.8}
           style={{
             backgroundColor: colors.card,
             borderRadius: 24,
@@ -195,21 +201,21 @@ const Settings = () => {
             size={20}
             color={colors.accent}
           />
-        </View>
+        </TouchableOpacity>
 
         {/* ── Settings items list ─────────────────────────────────────────── */}
         {/*
          * Each row has a gold-tinted icon square, a label + description,
          * and a muted chevron on the right.
-         * Sub-screens (Profile, Notifications, etc.) are not yet built —
-         * these rows are non-functional placeholders.
-         * TODO: wire up navigation when sub-screens are added.
+         * Rows with a `route` navigate on press; others are placeholders
+         * until their sub-screens are built.
          */}
         <View style={{ gap: 10, marginBottom: 16 }}>
           {SETTINGS_ITEMS.map((item) => (
             <TouchableOpacity
               key={item.label}
-              activeOpacity={0.7}
+              activeOpacity={item.route ? 0.7 : 1}
+              onPress={item.route ? () => router.push(item.route as any) : undefined}
               style={{
                 backgroundColor: colors.card,
                 borderRadius: 18,

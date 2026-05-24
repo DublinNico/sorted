@@ -1,21 +1,23 @@
 /**
- * components/CreateSubscriptionModal.tsx  —  Add Subscription bottom sheet
+ * components/CreateSubscriptionModal.tsx  —  Add Payment bottom sheet
  *
  * Redesigned to match the Figma "High-Fidelity Android UI Mockup" modal.
  *
  * Layout (top → bottom inside the sheet):
- *   1. Header row  — "New Subscription" title + circular close button
- *   2. Name field  — free-text input; used to derive the logos-api icon URL
- *   3. Price field — numeric decimal-pad input
- *   4. Frequency   — three-way segmented picker (Weekly / Monthly / Yearly)
- *   5. Category    — wrap-row of pill chips
- *   6. Submit CTA  — gold "Add Subscription" button (disabled when form is incomplete)
+ *   1. Header row         — "New Payment" title + circular close button
+ *   2. Payment Type       — dropdown selector from PAYMENT_TYPES list
+ *   3. Name               — free-text for the specific provider/service name
+ *   4. Amount (€)         — numeric decimal-pad input
+ *   5. Billing Cycle      — dropdown (Weekly / Monthly / Yearly)
+ *   6. Next Payment Date  — text input in dd/mm/yyyy format with calendar icon
+ *   7. Submit CTA         — gold "Add Payment" button (disabled when incomplete)
  *
  * On submit the component:
- *   • derives a domain from the subscription name (DOMAIN_OVERRIDES → fallback)
+ *   • uses the Name field to derive the logos-api icon domain
  *   • builds a logos-api URI for the service icon
  *   • assigns a deterministic colour from COLOR_PALETTE via a name hash
- *   • computes startDate (now) and renewalDate (now + 1 billing period)
+ *   • uses the Next Payment Date as renewalDate; startDate = today
+ *   • derives category automatically from the selected payment type
  *   • fires a PostHog "subscription_created" event
  *   • calls the onSubmit prop with the completed Subscription payload
  *
@@ -23,12 +25,14 @@
  * onClose.  On iOS a KeyboardAvoidingView pushes the sheet above the keyboard.
  *
  * All theme colours come from the NativeWind classes defined in global.css
- * (modal-container, auth-input, etc.) — no hardcoded hex values except the
- * placeholder text colour which must be passed as a prop to TextInput.
+ * (modal-container, auth-input, etc.) — no hardcoded hex values except where
+ * a prop is required by a React Native core component (e.g. placeholderTextColor).
  */
 
 import "@/global.css";
+import CalendarPicker from "@/components/CalendarPicker";
 import { colors } from "@/constants/theme";
+import { Ionicons } from "@expo/vector-icons";
 import clsx from "clsx";
 import dayjs from "dayjs";
 import { usePostHog } from "posthog-react-native";
@@ -41,6 +45,7 @@ import {
   ScrollView,
   Text,
   TextInput,
+  TouchableOpacity,
   View,
 } from "react-native";
 
@@ -169,14 +174,43 @@ const getDomain = (name: string): string => {
   return DOMAIN_OVERRIDES[lower] ?? DOMAIN_OVERRIDES[firstWord] ?? `${firstWord}.com`;
 };
 
+// ─── Payment types ────────────────────────────────────────────────────────────
+
+/**
+ * PAYMENT_TYPES
+ * Ordered list of selectable payment types shown in the dropdown.
+ * Utilities appear first per design spec.
+ */
+const PAYMENT_TYPES = [
+  "Rent / Housing",
+  "Utility - Electricity",
+  "Utility - Water",
+  "Utility - Gas",
+  "Utility - Internet",
+  "Utility - Phone",
+  "Utility - Waste Disposal",
+  "Utility - Other",
+  "Subscription - Entertainment",
+  "Subscription - Productivity",
+  "Subscription - Other",
+] as const;
+
+/** Union type derived from the PAYMENT_TYPES tuple. */
+type PaymentType = (typeof PAYMENT_TYPES)[number];
+
+/** Default selection — first item in the list (Rent / Housing). */
+const DEFAULT_PAYMENT_TYPE: PaymentType = PAYMENT_TYPES[0];
+
 // ─── Category list ────────────────────────────────────────────────────────────
 
 /**
  * CATEGORIES
- * Ordered list of subscription categories shown as chip selectors.
- * Must stay in sync with the category options in the Subscriptions filter bar.
+ * Ordered list of categories shown as chip selectors.
+ * Includes Utilities and Housing to cover the payment types above.
  */
 const CATEGORIES = [
+  "Utilities",
+  "Housing",
   "Entertainment",
   "AI Tools",
   "Developer Tools",
@@ -189,6 +223,26 @@ const CATEGORIES = [
 
 /** Union type derived from the CATEGORIES tuple. */
 type Category = (typeof CATEGORIES)[number];
+
+/**
+ * PAYMENT_TYPE_CATEGORY
+ * Maps each payment type to its implied category so the category chip
+ * auto-selects when the user picks a payment type.
+ * The user can still tap a different chip to override the auto-selection.
+ */
+const PAYMENT_TYPE_CATEGORY: Record<PaymentType, Category> = {
+  "Utility - Electricity":   "Utilities",
+  "Utility - Water":         "Utilities",
+  "Utility - Gas":           "Utilities",
+  "Utility - Internet":      "Utilities",
+  "Utility - Phone":         "Utilities",
+  "Utility - Waste Disposal":"Utilities",
+  "Utility - Other":         "Utilities",
+  "Subscription - Entertainment": "Entertainment",
+  "Subscription - Productivity":  "Productivity",
+  "Subscription - Other":         "Other",
+  "Rent / Housing":               "Housing",
+};
 
 // ─── Colour palette ───────────────────────────────────────────────────────────
 
@@ -240,12 +294,11 @@ interface CreateSubscriptionModalProps {
 
 /**
  * CreateSubscriptionModal
- * Bottom-sheet modal for adding a new subscription entry.
+ * Bottom-sheet modal for adding a new payment entry.
  *
- * Internal state tracks the four form fields (name, price, frequency, category).
- * On valid submit, the component assembles the full Subscription object
- * (including logos-api icon URI, computed dates, and a deterministic colour)
- * before passing it to onSubmit and resetting its own state.
+ * Form fields: Payment Type (dropdown), Name (free-text), Amount (€),
+ * Billing Cycle (dropdown), Next Payment Date (dd/mm/yyyy text input).
+ * Category is auto-derived from the selected payment type.
  */
 const CreateSubscriptionModal = ({
   visible,
@@ -255,69 +308,111 @@ const CreateSubscriptionModal = ({
 
   // ── Form state ──────────────────────────────────────────────────────────────
 
-  const [name,      setName]      = useState("");
-  const [price,     setPrice]     = useState("");
-  const [frequency, setFrequency] = useState<"Weekly" | "Monthly" | "Yearly">("Monthly");
-  const [category,  setCategory]  = useState<Category>("Entertainment");
+  const [paymentType,      setPaymentType]      = useState<PaymentType>(DEFAULT_PAYMENT_TYPE);
+  const [showTypeDropdown, setShowTypeDropdown] = useState(false);
+  const [name,             setName]             = useState("");
+  const [price,            setPrice]            = useState("");
+  const [billing,          setBilling]          = useState<"Weekly" | "Monthly" | "Yearly">("Monthly");
+  const [showBillingDrop,  setShowBillingDrop]  = useState(false);
+  const [nextPaymentDate,  setNextPaymentDate]  = useState("");
+  const [showCalendar,     setShowCalendar]     = useState(false);
 
   const posthog     = usePostHog();
   const parsedPrice = parseFloat(price);
 
-  /** True only when the name is non-empty and price is a positive number. */
+  /** True when name is filled and price is a positive number. */
   const isValid = name.trim().length > 0 && !isNaN(parsedPrice) && parsedPrice > 0;
+
+  // ── Helpers ─────────────────────────────────────────────────────────────────
+
+  /**
+   * formatDateInput
+   * Auto-inserts "/" separators so the field shows dd/mm/yyyy as the user types.
+   */
+  const formatDateInput = (raw: string): string => {
+    const digits = raw.replace(/\D/g, "").slice(0, 8);
+    if (digits.length <= 2) return digits;
+    if (digits.length <= 4) return `${digits.slice(0, 2)}/${digits.slice(2)}`;
+    return `${digits.slice(0, 2)}/${digits.slice(2, 4)}/${digits.slice(4)}`;
+  };
+
+  /**
+   * parseDateInput
+   * Converts a dd/mm/yyyy string to a dayjs object.
+   * Falls back to billing-cycle offset from today if the input is incomplete.
+   */
+  const parseDateInput = (dateStr: string): dayjs.Dayjs => {
+    const parts = dateStr.split("/");
+    if (parts.length === 3 && parts[2].length === 4) {
+      const parsed = dayjs(`${parts[2]}-${parts[1]}-${parts[0]}`);
+      if (parsed.isValid()) return parsed;
+    }
+    return billing === "Weekly"
+      ? dayjs().add(1, "week")
+      : billing === "Monthly"
+      ? dayjs().add(1, "month")
+      : dayjs().add(1, "year");
+  };
 
   // ── Handlers ────────────────────────────────────────────────────────────────
 
   /**
    * handleClose
    * Resets all form fields to their defaults, then calls the onClose prop.
-   * Called by the overlay Pressable and the ✕ button.
    */
   const handleClose = () => {
+    setPaymentType(DEFAULT_PAYMENT_TYPE);
+    setShowTypeDropdown(false);
     setName("");
     setPrice("");
-    setFrequency("Monthly");
-    setCategory("Entertainment");
+    setBilling("Monthly");
+    setShowBillingDrop(false);
+    setNextPaymentDate("");
+    setShowCalendar(false);
     onClose();
   };
 
   /**
+   * handleSelectPaymentType
+   * Sets the payment type and collapses the type dropdown.
+   */
+  const handleSelectPaymentType = (type: PaymentType) => {
+    setPaymentType(type);
+    setShowTypeDropdown(false);
+  };
+
+  /**
    * handleSubmit
-   * Guards against invalid state, builds the Subscription payload, fires a
-   * PostHog analytics event, calls onSubmit, then resets field state.
+   * Builds the Subscription payload, fires PostHog event, calls onSubmit,
+   * then resets state.
    *
-   * Icon URI: constructed from the logos-api using the resolved domain.
-   * Dates: startDate = now; renewalDate = now + 1 billing period.
-   * Color: deterministic pastel hash of the subscription name.
+   * Icon:     logos-api URI from the Name field via getDomain().
+   * Category: auto-derived from the selected payment type.
+   * Dates:    startDate = today; renewalDate from the date field (or computed).
    */
   const handleSubmit = () => {
     if (!isValid) return;
 
+    const trimmedName = name.trim();
     const startDate   = dayjs().toISOString();
-    const renewalDate = (
-      frequency === "Weekly"
-        ? dayjs().add(1, "week")
-        : frequency === "Monthly"
-        ? dayjs().add(1, "month")
-        : dayjs().add(1, "year")
-    ).toISOString();
-
-    const domain = getDomain(name);
-    const icon   = { uri: `https://logos-api.apistemic.com/domain:${domain}` };
+    const renewalDate = parseDateInput(nextPaymentDate).toISOString();
+    const domain      = getDomain(trimmedName);
+    const icon        = { uri: `https://logos-api.apistemic.com/domain:${domain}` };
+    const category    = PAYMENT_TYPE_CATEGORY[paymentType];
 
     const payload: Subscription = {
-      id:            `${name.trim().toLowerCase().replace(/\s+/g, "-")}-${Date.now()}`,
+      id:        `${trimmedName.toLowerCase().replace(/[\s/]+/g, "-")}-${Date.now()}`,
       icon,
-      name:          name.trim(),
-      price:         parsedPrice,
-      currency:      "EUR",
-      billing:       frequency,
-      frequency,
+      name:      trimmedName,
+      price:     parsedPrice,
+      currency:  "EUR",
+      billing,
+      frequency: billing,
       category,
-      status:        "active",
+      status:    "active",
       startDate,
       renewalDate,
-      color:         getColorFromName(name.trim()),
+      color:     getColorFromName(trimmedName),
     };
 
     onSubmit(payload);
@@ -329,11 +424,15 @@ const CreateSubscriptionModal = ({
       category:  payload.category,
     });
 
-    // Reset form so the sheet is clean the next time it opens.
+    // Reset for next use.
+    setPaymentType(DEFAULT_PAYMENT_TYPE);
+    setShowTypeDropdown(false);
     setName("");
     setPrice("");
-    setFrequency("Monthly");
-    setCategory("Entertainment");
+    setBilling("Monthly");
+    setShowBillingDrop(false);
+    setNextPaymentDate("");
+    setShowCalendar(false);
   };
 
   // ── Sheet content ────────────────────────────────────────────────────────────
@@ -354,7 +453,7 @@ const CreateSubscriptionModal = ({
 
         {/* ── Header: title + close button ─────────────────────────────────── */}
         <View className="modal-header">
-          <Text className="modal-title">New Subscription</Text>
+          <Text className="modal-title">New Payment</Text>
           <Pressable className="modal-close" onPress={handleClose}>
             <Text className="modal-close-text">✕</Text>
           </Pressable>
@@ -367,16 +466,71 @@ const CreateSubscriptionModal = ({
         >
           <View className="modal-body">
 
-            {/* ── Name field ───────────────────────────────────────────────── */}
+            {/* ── Payment Type dropdown ─────────────────────────────────────── */}
             {/*
-             * The value here drives getDomain() → logos-api URI.
-             * returnKeyType="next" moves focus to the price field on submit.
+             * Tapping the trigger toggles the inline options list.
+             * Selecting an option collapses the list and auto-sets the category.
+             */}
+            <View className="auth-field">
+              <Text className="auth-label">Payment Type</Text>
+
+              {/* Trigger row */}
+              <TouchableOpacity
+                onPress={() => { setShowTypeDropdown((v) => !v); setShowBillingDrop(false); }}
+                activeOpacity={0.8}
+                style={{
+                  flexDirection: "row",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  backgroundColor: colors.background,
+                  borderRadius: 14,
+                  borderWidth: 1,
+                  borderColor: showTypeDropdown ? colors.accent : colors.border,
+                  paddingHorizontal: 16,
+                  paddingVertical: 14,
+                }}
+              >
+                <Text style={{ fontSize: 15, color: colors.primary, fontFamily: "sans-medium", flex: 1 }}>
+                  {paymentType}
+                </Text>
+                <Ionicons name={showTypeDropdown ? "chevron-up" : "chevron-down"} size={18} color={colors.accent} />
+              </TouchableOpacity>
+
+              {/* Inline options list */}
+              {showTypeDropdown && (
+                <View style={{ backgroundColor: colors.background, borderRadius: 14, borderWidth: 1, borderColor: colors.accent, overflow: "hidden", marginTop: 4 }}>
+                  {PAYMENT_TYPES.map((type, index) => (
+                    <TouchableOpacity
+                      key={type}
+                      onPress={() => handleSelectPaymentType(type)}
+                      activeOpacity={0.7}
+                      style={{
+                        paddingHorizontal: 16,
+                        paddingVertical: 13,
+                        backgroundColor: type === paymentType ? colors.accent + "20" : "transparent",
+                        borderTopWidth: index === 0 ? 0 : 1,
+                        borderTopColor: colors.border,
+                      }}
+                    >
+                      <Text style={{ fontSize: 14, color: type === paymentType ? colors.accent : colors.primary, fontFamily: type === paymentType ? "sans-semibold" : "sans-regular" }}>
+                        {type}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              )}
+            </View>
+
+            {/* ── Name field ────────────────────────────────────────────────── */}
+            {/*
+             * Specific provider or service name (e.g. "Spotify", "ESB", "Rent").
+             * Drives getDomain() → logos-api icon URI lookup.
              */}
             <View className="auth-field">
               <Text className="auth-label">Name</Text>
               <TextInput
                 className="auth-input"
-                placeholder="e.g. Netflix"
+                placeholder="e.g., Spotify, Electricity, Rent"
                 placeholderTextColor={colors.mutedForeground}
                 value={name}
                 onChangeText={setName}
@@ -384,86 +538,111 @@ const CreateSubscriptionModal = ({
               />
             </View>
 
-            {/* ── Price field ───────────────────────────────────────────────── */}
+            {/* ── Amount field ──────────────────────────────────────────────── */}
             <View className="auth-field">
-              <Text className="auth-label">Price</Text>
+              <Text className="auth-label">Amount (€)</Text>
               <TextInput
                 className="auth-input"
-                placeholder="0.00"
+                placeholder="9.99"
                 placeholderTextColor={colors.mutedForeground}
                 value={price}
                 onChangeText={setPrice}
                 keyboardType="decimal-pad"
-                returnKeyType="done"
+                returnKeyType="next"
               />
             </View>
 
-            {/* ── Frequency picker ──────────────────────────────────────────── */}
-            {/*
-             * Three-way segmented control.
-             * Active option: gold border + gold/10 tint + gold text.
-             * Inactive: border-border + muted text.
-             */}
+            {/* ── Billing Cycle dropdown ────────────────────────────────────── */}
+            {/* Same dropdown pattern as Payment Type. */}
             <View className="auth-field">
-              <Text className="auth-label">Frequency</Text>
-              <View className="picker-row">
-                {(["Weekly", "Monthly", "Yearly"] as const).map((opt) => (
-                  <Pressable
-                    key={opt}
-                    className={clsx("picker-option", frequency === opt && "picker-option-active")}
-                    onPress={() => setFrequency(opt)}
-                  >
-                    <Text
-                      className={clsx(
-                        "picker-option-text",
-                        frequency === opt && "picker-option-text-active"
-                      )}
+              <Text className="auth-label">Billing Cycle</Text>
+
+              {/* Trigger row */}
+              <TouchableOpacity
+                onPress={() => { setShowBillingDrop((v) => !v); setShowTypeDropdown(false); }}
+                activeOpacity={0.8}
+                style={{
+                  flexDirection: "row",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  backgroundColor: colors.background,
+                  borderRadius: 14,
+                  borderWidth: 1,
+                  borderColor: showBillingDrop ? colors.accent : colors.border,
+                  paddingHorizontal: 16,
+                  paddingVertical: 14,
+                }}
+              >
+                <Text style={{ fontSize: 15, color: colors.primary, fontFamily: "sans-medium", flex: 1 }}>
+                  {billing}
+                </Text>
+                <Ionicons name={showBillingDrop ? "chevron-up" : "chevron-down"} size={18} color={colors.accent} />
+              </TouchableOpacity>
+
+              {/* Inline options list */}
+              {showBillingDrop && (
+                <View style={{ backgroundColor: colors.background, borderRadius: 14, borderWidth: 1, borderColor: colors.accent, overflow: "hidden", marginTop: 4 }}>
+                  {(["Weekly", "Monthly", "Yearly"] as const).map((opt, index) => (
+                    <TouchableOpacity
+                      key={opt}
+                      onPress={() => { setBilling(opt); setShowBillingDrop(false); }}
+                      activeOpacity={0.7}
+                      style={{
+                        paddingHorizontal: 16,
+                        paddingVertical: 13,
+                        backgroundColor: opt === billing ? colors.accent + "20" : "transparent",
+                        borderTopWidth: index === 0 ? 0 : 1,
+                        borderTopColor: colors.border,
+                      }}
                     >
-                      {opt}
-                    </Text>
-                  </Pressable>
-                ))}
-              </View>
+                      <Text style={{ fontSize: 14, color: opt === billing ? colors.accent : colors.primary, fontFamily: opt === billing ? "sans-semibold" : "sans-regular" }}>
+                        {opt}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              )}
             </View>
 
-            {/* ── Category chips ────────────────────────────────────────────── */}
+            {/* ── Next Payment Date ─────────────────────────────────────────── */}
             {/*
-             * Wrapping flex row of pill chips.
-             * Active chip: gold border + gold/10 tint + gold text.
-             * Inactive: border-border + muted text.
+             * Text input auto-formats to dd/mm/yyyy as the user types.
+             * Tapping the calendar icon opens the CalendarPicker popup modal.
+             * If left blank, renewalDate falls back to today + 1 billing period.
              */}
             <View className="auth-field">
-              <Text className="auth-label">Category</Text>
-              <View className="category-scroll">
-                {CATEGORIES.map((cat) => (
-                  <Pressable
-                    key={cat}
-                    className={clsx("category-chip", category === cat && "category-chip-active")}
-                    onPress={() => setCategory(cat)}
-                  >
-                    <Text
-                      className={clsx(
-                        "category-chip-text",
-                        category === cat && "category-chip-text-active"
-                      )}
-                    >
-                      {cat}
-                    </Text>
-                  </Pressable>
-                ))}
+              <Text className="auth-label">Next Payment Date</Text>
+              <View style={{ position: "relative" }}>
+                <TextInput
+                  className="auth-input"
+                  placeholder="dd/mm/yyyy"
+                  placeholderTextColor={colors.mutedForeground}
+                  value={nextPaymentDate}
+                  onChangeText={(v) => setNextPaymentDate(formatDateInput(v))}
+                  keyboardType="number-pad"
+                  returnKeyType="done"
+                  maxLength={10}
+                  style={{ paddingRight: 48 }}
+                />
+                {/* Tapping the calendar icon opens the date picker popup */}
+                <TouchableOpacity
+                  onPress={() => setShowCalendar(true)}
+                  hitSlop={8}
+                  style={{ position: "absolute", right: 16, top: 0, bottom: 0, justifyContent: "center" }}
+                >
+                  <Ionicons name="calendar-outline" size={20} color={colors.accent} />
+                </TouchableOpacity>
               </View>
             </View>
 
             {/* ── Submit CTA ────────────────────────────────────────────────── */}
-            {/*
-             * Disabled (45% opacity gold) until name + valid price are both set.
-             */}
+            {/* Disabled (45% opacity gold) until name + valid price are both set. */}
             <Pressable
               className={clsx("auth-button", !isValid && "auth-button-disabled")}
               onPress={handleSubmit}
               disabled={!isValid}
             >
-              <Text className="auth-button-text">Add Subscription</Text>
+              <Text className="auth-button-text">Add Payment</Text>
             </Pressable>
 
             {/* Bottom breathing room so the button clears the safe area */}
@@ -478,30 +657,40 @@ const CreateSubscriptionModal = ({
   // ── Platform-aware keyboard handling ────────────────────────────────────────
 
   return (
-    <Modal
-      visible={visible}
-      transparent
-      animationType="slide"
-      onRequestClose={handleClose}
-    >
-      {/*
-       * iOS: KeyboardAvoidingView with behavior="padding" shifts the sheet
-       *      upward so the keyboard never covers the active input.
-       * Android: The system keyboard is handled natively; a plain View suffices.
-       */}
-      {Platform.OS === "ios" ? (
-        <KeyboardAvoidingView
-          style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.5)" }}
-          behavior="padding"
-        >
-          {sheet}
-        </KeyboardAvoidingView>
-      ) : (
-        <View style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.5)" }}>
-          {sheet}
-        </View>
-      )}
-    </Modal>
+    <>
+      <Modal
+        visible={visible}
+        transparent
+        animationType="slide"
+        onRequestClose={handleClose}
+      >
+        {/*
+         * iOS: KeyboardAvoidingView with behavior="padding" shifts the sheet
+         *      upward so the keyboard never covers the active input.
+         * Android: The system keyboard is handled natively; a plain View suffices.
+         */}
+        {Platform.OS === "ios" ? (
+          <KeyboardAvoidingView
+            style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.5)" }}
+            behavior="padding"
+          >
+            {sheet}
+          </KeyboardAvoidingView>
+        ) : (
+          <View style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.5)" }}>
+            {sheet}
+          </View>
+        )}
+      </Modal>
+
+      {/* Calendar picker — rendered as a separate Modal so it layers above the sheet */}
+      <CalendarPicker
+        visible={showCalendar}
+        value={nextPaymentDate}
+        onSelect={(date) => setNextPaymentDate(date)}
+        onClose={() => setShowCalendar(false)}
+      />
+    </>
   );
 };
 
