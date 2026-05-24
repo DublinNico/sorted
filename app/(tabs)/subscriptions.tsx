@@ -60,8 +60,8 @@ const Subscriptions = () => {
    */
   const categories = useMemo(() => {
     const cats = subscriptions
-      .map((s) => s.category)
-      .filter((c): c is string => !!c && c.trim().length > 0);
+      .map((s) => s.category?.trim() || s.plan?.trim())
+      .filter((c): c is string => !!c && c.length > 0);
     return ["All", ...Array.from(new Set(cats))];
   }, [subscriptions]);
 
@@ -77,8 +77,9 @@ const Subscriptions = () => {
         s.name.toLowerCase().includes(q) ||
         s.category?.toLowerCase().includes(q) ||
         s.plan?.toLowerCase().includes(q);
+      const catOrPlan = s.category?.trim() || s.plan?.trim();
       const matchesCategory =
-        selectedCategory === "All" || s.category === selectedCategory;
+        selectedCategory === "All" || catOrPlan === selectedCategory;
       return matchesSearch && matchesCategory;
     });
   }, [subscriptions, query, selectedCategory]);
@@ -103,7 +104,7 @@ const Subscriptions = () => {
         <FlatList
           // ── List header — title, search, filters, summary ────────────────
           ListHeaderComponent={
-            <View style={{ paddingHorizontal: 24, paddingTop: 24 }}>
+            <View style={{ paddingTop: 24 }}>
 
               {/* Title */}
               <Text
