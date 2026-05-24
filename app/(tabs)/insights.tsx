@@ -22,8 +22,9 @@ import { colors } from "@/constants/theme";
 import { formatCurrency } from "@/lib/utils";
 import { useSubscriptionsStore } from "@/store/subscriptionsStore";
 import { Ionicons } from "@expo/vector-icons";
-import { useMemo } from "react";
-import { ScrollView, Text, View } from "react-native";
+import { useFocusEffect } from "expo-router";
+import { useCallback, useMemo, useRef } from "react";
+import { Animated, Easing, ScrollView, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -59,75 +60,148 @@ const TREND_DATA_STATIC = [
   { month: "Apr", amount: 1450 },
 ];
 
-// Height (px) of the bar chart drawing area — bars grow up from this baseline.
-const BAR_CHART_HEIGHT = 140;
+// Height (px) of the bar drawing area.
+const BAR_CHART_HEIGHT = 160;
 
 // ─── SpendingTrendChart ───────────────────────────────────────────────────────
 
 /**
  * SpendingTrendChart
- * Custom bar chart built entirely from View components.
- *
- * Each bar's pixel height is proportional to its value relative to the
- * maximum value in the dataset.  The current month's bar is rendered in
- * full gold; prior months use a 50 % opacity gold.
+ * Animated bar chart with Y-axis labels and horizontal gridlines.
+ * Bars grow from 0 to full height each time the Insights tab is focused.
  *
  * @param data  Array of { month, amount } objects (oldest → newest)
  */
 const SpendingTrendChart = ({ data }: { data: { month: string; amount: number }[] }) => {
-  const maxAmount = Math.max(...data.map((d) => d.amount));
+  const maxAmount = Math.max(...data.map((d) => d.amount), 1);
+
+  // Round up to nearest clean step so Y-axis labels are whole numbers.
+  const step  = Math.ceil(maxAmount / 4 / 100) * 100 || 100;
+  const yMax  = step * 4;
+  // Y-axis labels rendered top → bottom.
+  const yLabels = [yMax, step * 3, step * 2, step, 0];
+
+  // One Animated.Value per bar — persist across re-renders.
+  const animValues = useRef(data.map(() => new Animated.Value(0))).current;
+
+  // Re-run the grow animation every time the Insights tab is focused.
+  useFocusEffect(
+    useCallback(() => {
+      animValues.forEach((v) => v.setValue(0));
+      Animated.parallel(
+        animValues.map((v, i) =>
+          Animated.timing(v, {
+            toValue:         1,
+            duration:        550,
+            delay:           i * 80,
+            easing:          Easing.out(Easing.cubic),
+            useNativeDriver: false,
+          })
+        )
+      ).start();
+    }, [])
+  );
 
   return (
-    <View>
-      {/* ── Bar columns ── */}
+    <View style={{ flexDirection: "row", gap: 8 }}>
+
+      {/* ── Y-axis labels ── */}
       <View
         style={{
-          height: BAR_CHART_HEIGHT,
-          flexDirection: "row",
-          alignItems: "flex-end",
-          gap: 8,
+          width:           38,
+          height:          BAR_CHART_HEIGHT,
+          justifyContent:  "space-between",
+          alignItems:      "flex-end",
         }}
       >
-        {data.map((d, i) => {
-          // Ensure very small values still show a minimum visible bar height.
-          const barHeight = Math.max(8, (d.amount / maxAmount) * (BAR_CHART_HEIGHT - 8));
-          const isLatest = i === data.length - 1;
-
-          return (
-            <View
-              key={`bar-${i}`}
-              style={{ flex: 1, alignItems: "center", justifyContent: "flex-end" }}
-            >
-              <View
-                style={{
-                  width: "65%",
-                  height: barHeight,
-                  // Current month: full gold. Previous months: 50% opacity.
-                  backgroundColor: isLatest ? colors.accent : colors.accent + "80",
-                  borderTopLeftRadius: 6,
-                  borderTopRightRadius: 6,
-                }}
-              />
-            </View>
-          );
-        })}
+        {yLabels.map((v) => (
+          <Text
+            key={`ylabel-${v}`}
+            style={{
+              fontSize:    10,
+              color:       colors.mutedForeground,
+              fontFamily:  "sans-regular",
+              lineHeight:  12,
+            }}
+          >
+            {v}
+          </Text>
+        ))}
       </View>
 
-      {/* ── Month labels beneath each bar ── */}
-      <View style={{ flexDirection: "row", marginTop: 8 }}>
-        {data.map((d, i) => (
-          <View key={`label-${i}`} style={{ flex: 1, alignItems: "center" }}>
-            <Text
+      {/* ── Chart area + month labels ── */}
+      <View style={{ flex: 1 }}>
+
+        {/* Bars layered on top of horizontal gridlines */}
+        <View style={{ height: BAR_CHART_HEIGHT, position: "relative" }}>
+
+          {/* Gridlines — one per Y label, evenly spaced top → bottom */}
+          {yLabels.map((v, i) => (
+            <View
+              key={`grid-${v}`}
               style={{
-                fontSize: 12,
-                color: colors.mutedForeground,
-                fontFamily: "sans-regular",
+                position:        "absolute",
+                left:            0,
+                right:           0,
+                top:             (i / (yLabels.length - 1)) * (BAR_CHART_HEIGHT - 1),
+                height:          1,
+                backgroundColor: colors.border + "55",
               }}
-            >
-              {d.month}
-            </Text>
+            />
+          ))}
+
+          {/* Animated bars */}
+          <View
+            style={{
+              flexDirection:  "row",
+              alignItems:     "flex-end",
+              height:         "100%",
+              gap:            6,
+            }}
+          >
+            {data.map((d, i) => {
+              const targetH = Math.max(4, (d.amount / yMax) * BAR_CHART_HEIGHT);
+              const animH   = animValues[i].interpolate({
+                inputRange:  [0, 1],
+                outputRange: [0, targetH],
+              });
+
+              return (
+                <View
+                  key={`bar-${i}`}
+                  style={{ flex: 1, alignItems: "center", justifyContent: "flex-end", height: "100%" }}
+                >
+                  <Animated.View
+                    style={{
+                      width:                "78%",
+                      height:               animH,
+                      backgroundColor:      colors.accent,
+                      borderTopLeftRadius:  6,
+                      borderTopRightRadius: 6,
+                    }}
+                  />
+                </View>
+              );
+            })}
           </View>
-        ))}
+        </View>
+
+        {/* Month labels */}
+        <View style={{ flexDirection: "row", marginTop: 8 }}>
+          {data.map((d, i) => (
+            <View key={`label-${i}`} style={{ flex: 1, alignItems: "center" }}>
+              <Text
+                style={{
+                  fontSize:   12,
+                  color:      colors.mutedForeground,
+                  fontFamily: "sans-regular",
+                }}
+              >
+                {d.month}
+              </Text>
+            </View>
+          ))}
+        </View>
       </View>
     </View>
   );
