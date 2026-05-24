@@ -26,6 +26,7 @@ import { useFocusEffect } from "expo-router";
 import { useCallback, useMemo, useRef } from "react";
 import { Animated, Easing, ScrollView, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import Svg, { Path } from "react-native-svg";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -207,10 +208,54 @@ const SpendingTrendChart = ({ data }: { data: { month: string; amount: number }[
   );
 };
 
+// ─── Donut chart helpers ──────────────────────────────────────────────────────
+
+/** Dimensions of the SVG canvas and ring radii. */
+const DONUT_SIZE = 200;
+const OUTER_R    = 88;
+const INNER_R    = 54;
+/** Small gap (degrees) between adjacent segments. */
+const GAP_DEG    = 1.5;
+
+/**
+ * polarToCartesian
+ * Converts a polar angle (0° = top, clockwise) to an x/y point on a circle.
+ */
+const polarToCartesian = (cx: number, cy: number, r: number, deg: number) => {
+  const rad = ((deg - 90) * Math.PI) / 180;
+  return { x: cx + r * Math.cos(rad), y: cy + r * Math.sin(rad) };
+};
+
+/**
+ * arcPath
+ * Returns the SVG path string for a donut ring segment.
+ * Caps the sweep at 359.99° so a single-segment chart still renders.
+ */
+const arcPath = (
+  cx: number, cy: number,
+  outerR: number, innerR: number,
+  startDeg: number, endDeg: number,
+): string => {
+  const sweep = Math.min(endDeg - startDeg, 359.99);
+  const end   = startDeg + sweep;
+  const large = sweep > 180 ? 1 : 0;
+  const os = polarToCartesian(cx, cy, outerR, startDeg);
+  const oe = polarToCartesian(cx, cy, outerR, end);
+  const ie = polarToCartesian(cx, cy, innerR, end);
+  const is = polarToCartesian(cx, cy, innerR, startDeg);
+  return [
+    `M ${os.x} ${os.y}`,
+    `A ${outerR} ${outerR} 0 ${large} 1 ${oe.x} ${oe.y}`,
+    `L ${ie.x} ${ie.y}`,
+    `A ${innerR} ${innerR} 0 ${large} 0 ${is.x} ${is.y}`,
+    "Z",
+  ].join(" ");
+};
+
 // ─── CategoryBreakdown ────────────────────────────────────────────────────────
 
 /**
- * CategoryBreakdownProps
+ * CategoryEntry
  * A single category entry used by the breakdown section.
  */
 type CategoryEntry = {
@@ -222,100 +267,114 @@ type CategoryEntry = {
 
 /**
  * CategoryBreakdown
- * Renders:
- *   1. A segmented horizontal bar — each colour segment is proportional
- *      to that category's share of total spending.
- *   2. A legend list — colour dot, category name, amount, and percentage.
+ * Renders a donut chart + legend list.
+ * The donut scales in with a spring animation on every tab focus.
  *
- * @param data   Sorted array of category entries (highest value first)
+ * @param data  Sorted array of category entries (highest value first)
  */
-const CategoryBreakdown = ({ data }: { data: CategoryEntry[] }) => (
-  <View style={{ gap: 16 }}>
+const CategoryBreakdown = ({ data }: { data: CategoryEntry[] }) => {
 
-    {/* ── Segmented bar ── */}
-    {/*
-     * Each segment's flex value equals its proportion of the total,
-     * so segments automatically fill the full bar width.
-     * overflow: hidden + borderRadius clip the rounded ends.
-     */}
-    <View
-      style={{
-        flexDirection: "row",
-        height: 10,
-        borderRadius: 5,
-        overflow: "hidden",
-        gap: 2,
-      }}
-    >
-      {data.map((cat) => (
-        <View
-          key={cat.name}
-          style={{
-            flex: cat.value,   // proportional width
-            backgroundColor: cat.color,
-          }}
-        />
-      ))}
-    </View>
+  // Spring scale animation — replays each time the Insights tab is focused.
+  const scaleAnim = useRef(new Animated.Value(0)).current;
 
-    {/* ── Legend list ── */}
-    <View style={{ gap: 12 }}>
-      {data.map((cat) => (
-        <View
-          key={cat.name}
-          style={{
-            flexDirection: "row",
-            alignItems: "center",
-            justifyContent: "space-between",
-          }}
-        >
-          {/* Left: colour dot + category name */}
-          <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
-            <View
-              style={{
-                width: 12,
-                height: 12,
-                borderRadius: 6,
-                backgroundColor: cat.color,
-              }}
-            />
-            <Text
-              style={{
-                fontSize: 14,
-                color: colors.primary,
-                fontFamily: "sans-regular",
-              }}
-            >
-              {cat.name}
-            </Text>
+  useFocusEffect(
+    useCallback(() => {
+      scaleAnim.setValue(0);
+      Animated.spring(scaleAnim, {
+        toValue:         1,
+        tension:         55,
+        friction:        7,
+        useNativeDriver: true,
+      }).start();
+    }, [])
+  );
+
+  // Compute SVG arc path for each segment.
+  const cx = DONUT_SIZE / 2;
+  const cy = DONUT_SIZE / 2;
+  const total = data.reduce((sum, d) => sum + d.value, 0);
+  let angle = 0;
+  const segments = data.map((d) => {
+    const sweep = (d.value / total) * 360;
+    const start = angle + GAP_DEG / 2;
+    const end   = angle + sweep - GAP_DEG / 2;
+    angle += sweep;
+    return { ...d, path: arcPath(cx, cy, OUTER_R, INNER_R, start, end) };
+  });
+
+  return (
+    <View style={{ gap: 20 }}>
+
+      {/* ── Donut chart — springs in on tab focus ── */}
+      <Animated.View
+        style={{ alignItems: "center", transform: [{ scale: scaleAnim }] }}
+      >
+        <Svg width={DONUT_SIZE} height={DONUT_SIZE}>
+          {segments.map((seg) => (
+            <Path key={seg.name} d={seg.path} fill={seg.color} />
+          ))}
+        </Svg>
+      </Animated.View>
+
+      {/* ── Legend list ── */}
+      <View style={{ gap: 14 }}>
+        {data.map((cat) => (
+          <View
+            key={cat.name}
+            style={{
+              flexDirection:  "row",
+              alignItems:     "center",
+              justifyContent: "space-between",
+            }}
+          >
+            {/* Left: colour dot + category name */}
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+              <View
+                style={{
+                  width:           12,
+                  height:          12,
+                  borderRadius:    6,
+                  backgroundColor: cat.color,
+                }}
+              />
+              <Text
+                style={{
+                  fontSize:   14,
+                  color:      colors.primary,
+                  fontFamily: "sans-regular",
+                }}
+              >
+                {cat.name}
+              </Text>
+            </View>
+
+            {/* Right: amount + percentage */}
+            <View style={{ alignItems: "flex-end" }}>
+              <Text
+                style={{
+                  fontSize:   14,
+                  color:      colors.primary,
+                  fontFamily: "sans-semibold",
+                }}
+              >
+                {formatCurrency(cat.value)}
+              </Text>
+              <Text
+                style={{
+                  fontSize:   12,
+                  color:      colors.mutedForeground,
+                  fontFamily: "sans-regular",
+                }}
+              >
+                {cat.percent.toFixed(1)}%
+              </Text>
+            </View>
           </View>
-
-          {/* Right: amount + percentage */}
-          <View style={{ alignItems: "flex-end" }}>
-            <Text
-              style={{
-                fontSize: 14,
-                color: colors.primary,
-                fontFamily: "sans-semibold",
-              }}
-            >
-              {formatCurrency(cat.value)}
-            </Text>
-            <Text
-              style={{
-                fontSize: 12,
-                color: colors.mutedForeground,
-                fontFamily: "sans-regular",
-              }}
-            >
-              {cat.percent.toFixed(1)}%
-            </Text>
-          </View>
-        </View>
-      ))}
+        ))}
+      </View>
     </View>
-  </View>
-);
+  );
+};
 
 // ─── InsightsScreen ───────────────────────────────────────────────────────────
 
