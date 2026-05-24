@@ -45,6 +45,7 @@ function MfaScreen({
   onReset,
   isLoading,
   codeError,
+  errorMessage,
 }: {
   email: string;
   code: string;
@@ -54,6 +55,7 @@ function MfaScreen({
   onReset: () => void;
   isLoading: boolean;
   codeError?: string;
+  errorMessage?: string;
 }) {
   return (
     <SafeAreaView style={safeArea}>
@@ -99,6 +101,11 @@ function MfaScreen({
                 />
                 {!!codeError && (
                   <Text className="auth-error">{codeError}</Text>
+                )}
+                {!!errorMessage && (
+                  <Text className="auth-error" style={{ textAlign: "center" }}>
+                    {errorMessage}
+                  </Text>
                 )}
               </View>
 
@@ -234,6 +241,7 @@ export default function SignIn() {
         }}
         isLoading={isLoading}
         codeError={errors?.fields?.code?.message}
+        errorMessage={errorMessage}
       />
     );
   }

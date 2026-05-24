@@ -159,8 +159,11 @@ export default function HomeScreen() {
   // Sum all subscription prices for the spending card total.
   const totalMonthly = subscriptions.reduce((sum, s) => sum + s.price, 0);
 
-  // Sort by renewal date ascending and take the first 3.
+  // Show the 3 nearest FUTURE renewals only — past dates are excluded so
+  // newly added subscriptions (which always have future dates) can appear.
+  const now = Date.now();
   const upcomingSubs = [...subscriptions]
+    .filter((s) => s.renewalDate && new Date(s.renewalDate).getTime() > now)
     .sort(
       (a, b) =>
         new Date(a.renewalDate ?? 0).getTime() -
@@ -209,6 +212,8 @@ export default function HomeScreen() {
           {/* Right: settings icon — taps navigate to the Settings tab */}
           <Pressable
             onPress={() => router.navigate("/(tabs)/settings")}
+            accessibilityRole="button"
+            accessibilityLabel="Settings"
             style={{
               width: 40,
               height: 40,

@@ -64,7 +64,8 @@ export default function SignUp() {
   const emailValid = email.includes("@") && email.includes(".");
   const passwordValid = password.length >= 8;
   const canSubmit =
-    emailValid && passwordValid && confirmPassword.length > 0 && !isLoading;
+    emailValid && passwordValid && confirmPassword.length > 0 &&
+    password === confirmPassword && !isLoading;
 
   const finalize = async () => {
     await signUp.finalize({ navigate: () => {} });

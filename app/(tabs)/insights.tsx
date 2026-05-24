@@ -95,7 +95,7 @@ const SpendingTrendChart = ({ data }: { data: { month: string; amount: number }[
 
           return (
             <View
-              key={d.month}
+              key={`bar-${i}`}
               style={{ flex: 1, alignItems: "center", justifyContent: "flex-end" }}
             >
               <View
@@ -115,8 +115,8 @@ const SpendingTrendChart = ({ data }: { data: { month: string; amount: number }[
 
       {/* ── Month labels beneath each bar ── */}
       <View style={{ flexDirection: "row", marginTop: 8 }}>
-        {data.map((d) => (
-          <View key={d.month} style={{ flex: 1, alignItems: "center" }}>
+        {data.map((d, i) => (
+          <View key={`label-${i}`} style={{ flex: 1, alignItems: "center" }}>
             <Text
               style={{
                 fontSize: 12,
@@ -261,6 +261,13 @@ const InsightsScreen = () => {
   /** Total of all subscription prices. */
   const totalMonthly = subscriptions.reduce((sum, s) => sum + s.price, 0);
 
+  /** Percentage change vs the most recent static month (prev month proxy). */
+  const prevMonthAmount = TREND_DATA_STATIC[TREND_DATA_STATIC.length - 1].amount;
+  const trendPercent = prevMonthAmount > 0
+    ? ((totalMonthly - prevMonthAmount) / prevMonthAmount) * 100
+    : 0;
+  const trendLabel = `${trendPercent >= 0 ? "+" : ""}${trendPercent.toFixed(0)}% vs last month`;
+
   /**
    * trendData
    * Static prior-month figures + the live current-month total as the last bar.
@@ -387,7 +394,7 @@ const InsightsScreen = () => {
                 fontFamily: "sans-medium",
               }}
             >
-              +23% vs last month
+              {trendLabel}
             </Text>
           </View>
         </View>
