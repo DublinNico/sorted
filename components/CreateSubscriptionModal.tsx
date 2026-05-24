@@ -420,8 +420,8 @@ const CreateSubscriptionModal = ({
     posthog.capture("subscription_created", {
       name:      payload.name,
       price:     payload.price,
-      frequency: payload.frequency,
-      category:  payload.category,
+      frequency: payload.frequency ?? null,
+      category:  payload.category ?? null,
     });
 
     // Reset for next use.
