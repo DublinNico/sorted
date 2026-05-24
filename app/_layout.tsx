@@ -8,8 +8,11 @@ import { ActivityIndicator, View } from "react-native";
 import { colors } from "@/constants/theme";
 import { PostHogProvider, usePostHog } from "posthog-react-native";
 
-const posthogKey = process.env.EXPO_PUBLIC_POSTHOG_KEY!;
-const posthogHost = process.env.EXPO_PUBLIC_POSTHOG_HOST!;
+const posthogKey = process.env.EXPO_PUBLIC_POSTHOG_KEY;
+const posthogHost = process.env.EXPO_PUBLIC_POSTHOG_HOST;
+
+if (!posthogKey) throw new Error("Missing EXPO_PUBLIC_POSTHOG_KEY in your .env file");
+if (!posthogHost) throw new Error("Missing EXPO_PUBLIC_POSTHOG_HOST in your .env file");
 
 const publishableKey = process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY!;
 

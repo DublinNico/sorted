@@ -1,7 +1,7 @@
 import { icons } from "@/constants/icons";
 import { formatCurrency, formatStatusLabel, formatSubscriptionDateTime } from "@/lib/utils";
 import clsx from "clsx";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Image, Pressable, Text, TouchableOpacity, View } from "react-native";
 
 const SubscriptionCard = ({
@@ -22,12 +22,13 @@ const SubscriptionCard = ({
   onCancelPress,
 }: SubscriptionCardProps) => {
   const [imgError, setImgError] = useState(false);
+  useEffect(() => { setImgError(false); }, [icon]);
 
   return (
     <Pressable onPress={onPress}
 
-      className={clsx("sub-card", expanded ? 'sub-card-expanded' : "bg-card")}
-      style={! expanded && color ? { backgroundColor: color } : undefined}
+      className={clsx("sub-card", expanded ? "sub-card-expanded" : !color && "bg-card")}
+      style={!expanded && color ? { backgroundColor: color } : undefined}
     >
       <View className="sub-head">
         <View className="sub-main">

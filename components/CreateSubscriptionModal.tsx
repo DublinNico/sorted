@@ -1,6 +1,7 @@
 import "@/global.css";
 import clsx from "clsx";
 import dayjs from "dayjs";
+import { usePostHog } from "posthog-react-native";
 import React, { useState } from "react";
 import {
   KeyboardAvoidingView,
@@ -14,9 +15,94 @@ import {
 } from "react-native";
 
 const DOMAIN_OVERRIDES: Record<string, string> = {
+  // Energy
+  esb: "esb.ie",
+  "electric ireland": "electricireland.ie",
+  energia: "energia.ie",
+  "sse airtricity": "sseairtricity.com",
+  airtricity: "sseairtricity.com",
+  "bord gais energy": "bordgaisenergy.ie",
+  "bord gáis energy": "bordgaisenergy.ie",
+  "bord gais": "bordgaisenergy.ie",
+  "bord gáis": "bordgaisenergy.ie",
+  prepaypower: "prepaypower.ie",
+  "prepay power": "prepaypower.ie",
+  pinergy: "pinergy.ie",
+  flogas: "flogas.ie",
+  "community power": "communitypower.ie",
+  waterpower: "waterpower.ie",
+  "water power": "waterpower.ie",
+  "yuno energy": "yunoenergy.ie",
+  yuno: "yunoenergy.ie",
+  "go power": "gopower.ie",
+  // Water
+  "uisce éireann": "water.ie",
+  "uisce eireann": "water.ie",
+  "irish water": "water.ie",
+  // Telecoms
+  eir: "eir.ie",
+  vodafone: "vodafone.com",
+  "vodafone ireland": "vodafone.com",
+  "virgin media": "virginmedia.ie",
+  sky: "sky.com",
+  "sky ireland": "sky.com",
+  three: "three.ie",
+  "three ireland": "three.ie",
+  "pure telecom": "puretelecom.ie",
+  digiweb: "digiweb.ie",
+  imagine: "imagine.ie",
+  siro: "siro.ie",
+  // Waste
+  greyhound: "greyhound.ie",
+  panda: "panda.ie",
+  "thorntons recycling": "thorntons-recycling.ie",
+  thorntons: "thorntons-recycling.ie",
+  "city bin co": "citybin.com",
+  "city bin": "citybin.com",
+  oxigen: "oxigen.ie",
+  kwd: "kwd.ie",
+  // Banks & Finance
   aib: "aib.ie",
+  "bank of ireland": "bankofireland.com",
+  "permanent tsb": "permanenttsb.ie",
+  ptsb: "permanenttsb.ie",
+  "an post money": "anpost.ie",
+  "avant money": "avantmoney.ie",
+  ebs: "ebs.ie",
+  revolut: "revolut.com",
+  n26: "n26.com",
+  bunq: "bunq.com",
+  // Insurance
+  aviva: "aviva.ie",
+  zurich: "zurich.ie",
+  axa: "axa.ie",
+  allianz: "allianz.ie",
+  fbd: "fbd.ie",
+  "liberty insurance": "libertymutual.com",
+  rsa: "rsagroup.com",
+  vhi: "vhi.ie",
+  "laya healthcare": "layahealthcare.ie",
+  laya: "layahealthcare.ie",
+  "irish life health": "irishlifehealth.ie",
+  "irish life": "irishlife.ie",
+  // Government & Services
+  "an post": "anpost.ie",
+  "revenue commissioners": "revenue.ie",
+  "local property tax": "revenue.ie",
+  "motor tax": "motortax.ie",
+  "residential tenancies board": "rtb.ie",
+  rtb: "rtb.ie",
+  // Housing
   "tuath housing": "tuathhousing.ie",
   tuath: "tuathhousing.ie",
+  // Estate Agents
+  dng: "dng.ie",
+  "sherry fitzgerald": "sherryfitz.ie",
+  "hooke & macdonald": "hookemacdonald.ie",
+  "hooke and macdonald": "hookemacdonald.ie",
+  hooke: "hookemacdonald.ie",
+  lisney: "lisney.ie",
+  "owen reilly": "owenreilly.com",
 };
 
 const getDomain = (name: string): string => {
@@ -38,15 +124,19 @@ const CATEGORIES = [
 
 type Category = (typeof CATEGORIES)[number];
 
-const CATEGORY_COLORS: Record<Category, string> = {
-  Entertainment: "#ffd6a5",
-  "AI Tools": "#b8d4e3",
-  "Developer Tools": "#e8def8",
-  Design: "#f5c542",
-  Productivity: "#caffbf",
-  Cloud: "#a0c4ff",
-  Music: "#ffc6ff",
-  Other: "#ffe0b2",
+const COLOR_PALETTE = [
+  "#ffd6a5", "#b8d4e3", "#e8def8", "#f5c542",
+  "#caffbf", "#a0c4ff", "#ffc6ff", "#ffe0b2",
+  "#d4f5c0", "#f5d0d0", "#c0d4f5", "#f9c784",
+  "#c9b8e8", "#b8e8d4", "#e8c9b8",
+];
+
+const getColorFromName = (name: string): string => {
+  let hash = 0;
+  for (let i = 0; i < name.length; i++) {
+    hash = name.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  return COLOR_PALETTE[Math.abs(hash) % COLOR_PALETTE.length];
 };
 
 interface CreateSubscriptionModalProps {
@@ -65,6 +155,7 @@ const CreateSubscriptionModal = ({
   const [frequency, setFrequency] = useState<"Weekly" | "Monthly" | "Yearly">("Monthly");
   const [category, setCategory] = useState<Category>("Entertainment");
 
+  const posthog = usePostHog();
   const parsedPrice = parseFloat(price);
   const isValid = name.trim().length > 0 && !isNaN(parsedPrice) && parsedPrice > 0;
 
@@ -90,7 +181,7 @@ const CreateSubscriptionModal = ({
     const domain = getDomain(name);
     const icon = { uri: `https://logos-api.apistemic.com/domain:${domain}` };
 
-    onSubmit({
+    const payload = {
       id: `${name.trim().toLowerCase().replace(/\s+/g, "-")}-${Date.now()}`,
       icon,
       name: name.trim(),
@@ -102,7 +193,15 @@ const CreateSubscriptionModal = ({
       status: "active",
       startDate,
       renewalDate,
-      color: CATEGORY_COLORS[category],
+      color: getColorFromName(name.trim()),
+    };
+
+    onSubmit(payload);
+    posthog.capture("subscription_created", {
+      name: payload.name,
+      price: payload.price,
+      frequency: payload.frequency,
+      category: payload.category,
     });
 
     setName("");

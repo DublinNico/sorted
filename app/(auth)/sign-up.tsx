@@ -1,8 +1,6 @@
 import React, { useState } from "react";
 import { useSignUp } from "@clerk/expo";
 import { Link } from "expo-router";
-
-const safeArea = { flex: 1, backgroundColor: "#fff9e3" } as const;
 import {
   View,
   Text,
@@ -16,6 +14,8 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { colors } from "@/constants/theme";
+
+const safeArea = { flex: 1, backgroundColor: colors.background } as const;
 
 function BrandBlock() {
   return (

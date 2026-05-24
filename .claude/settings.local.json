@@ -19,7 +19,12 @@
       "Bash(xargs grep '\"name\"')",
       "Bash(xargs grep -l \"SignInFutureResource\\\\|SignInSignalValue\")",
       "Bash(git checkout *)",
-      "Bash(npm install *)"
+      "Bash(npm install *)",
+      "WebFetch(domain:logos-api.apistemic.com)",
+      "Bash(npm info *)",
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)",
+      "WebFetch(domain:www.figma.com)"
     ]
   }
 }
