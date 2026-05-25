@@ -1,0 +1,37 @@
+/**
+ * app/splash-preview.tsx  —  DEV ONLY
+ * Accessible from the Settings screen bottom button.
+ * Remove before shipping to production.
+ */
+
+import AppSplashScreen from "@/components/AppSplashScreen";
+import { colors } from "@/constants/theme";
+import { Ionicons } from "@expo/vector-icons";
+import { useRouter } from "expo-router";
+import { Pressable, View } from "react-native";
+
+export default function SplashPreview() {
+  const router = useRouter();
+  return (
+    <View style={{ flex: 1 }}>
+      <AppSplashScreen />
+      {/* Back button overlay — tap to exit the preview */}
+      <Pressable
+        onPress={() => router.back()}
+        style={{
+          position: "absolute",
+          top: 52,
+          left: 20,
+          width: 36,
+          height: 36,
+          borderRadius: 10,
+          backgroundColor: colors.card,
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+      >
+        <Ionicons name="chevron-back" size={20} color={colors.accent} />
+      </Pressable>
+    </View>
+  );
+}

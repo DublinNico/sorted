@@ -15,10 +15,17 @@
  */
 
 import "@/global.css";
+import CreateSubscriptionModal from "@/components/CreateSubscriptionModal";
 import SubscriptionCard from "@/components/SubscriptionCard";
 import { colors } from "@/constants/theme";
 import { formatCurrency } from "@/lib/utils";
 import { useSubscriptionsStore } from "@/store/subscriptionsStore";
+import { useSupabase } from "@/hooks/useSupabase";
+import {
+  deleteSubscription as deleteSubscriptionService,
+  updateSubscription as updateSubscriptionService,
+} from "@/services/subscriptions";
+import { useAuth } from "@clerk/expo";
 import { Ionicons } from "@expo/vector-icons";
 import React, { useMemo, useState } from "react";
 import {
@@ -40,7 +47,9 @@ import { SafeAreaView } from "react-native-safe-area-context";
  * Renders the Bills tab — a searchable, filterable list of all subscriptions.
  */
 const Subscriptions = () => {
-  const { subscriptions, deleteSubscription } = useSubscriptionsStore();
+  const { subscriptions, deleteSubscription, updateSubscription } = useSubscriptionsStore();
+  const supabase = useSupabase();
+  const { userId } = useAuth();
 
   // Search query typed into the input field.
   const [query, setQuery] = useState("");
@@ -50,6 +59,9 @@ const Subscriptions = () => {
 
   // ID of the currently expanded card; null means all are collapsed.
   const [expandedId, setExpandedId] = useState<string | null>(null);
+
+  // Subscription being edited; null means the edit modal is closed.
+  const [editingSubscription, setEditingSubscription] = useState<Subscription | null>(null);
 
   // ── Derived data ────────────────────────────────────────────────────────────
 
@@ -244,9 +256,16 @@ const Subscriptions = () => {
                   current === item.id ? null : item.id
                 )
               }
+              onEditPress={() => {
+                setEditingSubscription(item);
+                setExpandedId(null);
+              }}
               onCancelPress={() => {
                 deleteSubscription(item.id);
                 setExpandedId(null);
+                if (userId) {
+                  deleteSubscriptionService(supabase, item.id, userId).catch(console.error);
+                }
               }}
             />
           )}
@@ -274,6 +293,20 @@ const Subscriptions = () => {
           }
         />
       </KeyboardAvoidingView>
+
+      {/* ── Edit Payment modal ─────────────────────────────────────────────── */}
+      <CreateSubscriptionModal
+        visible={editingSubscription !== null}
+        initialData={editingSubscription ?? undefined}
+        onClose={() => setEditingSubscription(null)}
+        onSubmit={(updated) => {
+          updateSubscription(updated);
+          setEditingSubscription(null);
+          if (userId) {
+            updateSubscriptionService(supabase, updated, userId).catch(console.error);
+          }
+        }}
+      />
     </SafeAreaView>
   );
 };

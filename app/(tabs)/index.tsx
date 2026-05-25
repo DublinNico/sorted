@@ -1,21 +1,3 @@
-/**
- * app/(tabs)/index.tsx  —  Home screen
- *
- * Redesigned to match the Figma "High-Fidelity Android UI Mockup".
- *
- * Layout (top → bottom):
- *   1. Header       — greeting text, user name (Clerk), settings shortcut
- *   2. Spending card — gold card showing total monthly cost + trend line
- *   3. Upcoming     — first 3 soonest-renewing subscriptions from the store
- *
- * Icon images use the logos-api (apistemic.com) URI stored on each
- * subscription object.  A local wallet fallback is shown on load error
- * so broken URIs never leave an empty box.
- *
- * The Add Subscription modal is owned by (tabs)/_layout.tsx and opened
- * via the tab-bar FAB — this screen no longer manages it.
- */
-
 import "@/global.css";
 import { icons } from "@/constants/icons";
 import { colors } from "@/constants/theme";
@@ -34,186 +16,271 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { G, Path, Svg } from "react-native-svg";
 
-// ─── UpcomingRow ──────────────────────────────────────────────────────────────
+// ─── Constants ────────────────────────────────────────────────────────────────
 
-/**
- * UpcomingRowProps
- * Props consumed by a single upcoming-payment row.
- */
-type UpcomingRowProps = {
-  subscription: Subscription;
+const CATEGORY_COLORS: Record<string, string> = {
+  Housing:            "#D4633A",
+  Utilities:          "#C9A84C",
+  Entertainment:      "#4CAF50",
+  Productivity:       "#5C7CFA",
+  "AI Tools":         "#9C5CF5",
+  Cloud:              "#38BDF8",
+  Music:              "#FF6B9D",
+  Design:             "#FF9500",
+  "Developer Tools":  "#00D4AA",
+  Other:              "#6B7280",
 };
 
-/**
- * UpcomingRow
- * Renders one card in the "Upcoming Payments" list.
- *
- * Shows:
- *   - Service logo (from the logos-api URI stored on the subscription)
- *     with a local wallet icon fallback on load error
- *   - Service name + renewal date
- *   - Monthly price on the right
- */
-const UpcomingRow = ({ subscription: sub }: UpcomingRowProps) => {
-  // Track whether the remote logo failed to load so we can show a fallback.
-  const [imgError, setImgError] = useState(false);
+// ─── Donut chart ──────────────────────────────────────────────────────────────
 
+function polarToCartesian(cx: number, cy: number, r: number, deg: number) {
+  const rad = ((deg - 90) * Math.PI) / 180;
+  return { x: cx + r * Math.cos(rad), y: cy + r * Math.sin(rad) };
+}
+
+function arcPath(
+  cx: number, cy: number,
+  R: number, r: number,
+  start: number, end: number
+): string {
+  if (Math.abs(end - start) >= 359.99) end = start + 359.99;
+  const o1 = polarToCartesian(cx, cy, R, start);
+  const o2 = polarToCartesian(cx, cy, R, end);
+  const i1 = polarToCartesian(cx, cy, r, end);
+  const i2 = polarToCartesian(cx, cy, r, start);
+  const large = end - start > 180 ? 1 : 0;
+  return [
+    `M ${o1.x} ${o1.y}`,
+    `A ${R} ${R} 0 ${large} 1 ${o2.x} ${o2.y}`,
+    `L ${i1.x} ${i1.y}`,
+    `A ${r} ${r} 0 ${large} 0 ${i2.x} ${i2.y}`,
+    "Z",
+  ].join(" ");
+}
+
+interface ChartSlice { label: string; value: number; color: string }
+
+function DonutChart({ data, size = 130 }: { data: ChartSlice[]; size?: number }) {
+  const cx = size / 2;
+  const cy = size / 2;
+  const R = size * 0.44;
+  const r = size * 0.27;
+  const total = data.reduce((s, d) => s + d.value, 0);
+  if (total === 0) return (
+    <Svg width={size} height={size}>
+      <Path d={arcPath(cx, cy, R, r, 0, 359.99)} fill={colors.card} />
+    </Svg>
+  );
+
+  let angle = 0;
+  return (
+    <Svg width={size} height={size}>
+      <G>
+        {data.map((slice, i) => {
+          const sweep = (slice.value / total) * 360;
+          const path = arcPath(cx, cy, R, r, angle, angle + sweep);
+          angle += sweep;
+          return <Path key={i} d={path} fill={slice.color} />;
+        })}
+      </G>
+    </Svg>
+  );
+}
+
+// ─── Stat card ────────────────────────────────────────────────────────────────
+
+function StatCard({
+  label,
+  value,
+  sub,
+  icon,
+  gold,
+  valueColor,
+  flex,
+}: {
+  label: string;
+  value: string;
+  sub?: string;
+  icon: React.ComponentProps<typeof Ionicons>["name"];
+  gold?: boolean;
+  valueColor?: string;
+  flex?: number;
+}) {
+  return (
+    <View
+      style={{
+        flex: flex ?? 1,
+        backgroundColor: gold ? colors.accent : colors.card,
+        borderRadius: 20,
+        padding: 16,
+        gap: 4,
+      }}
+    >
+      <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 2 }}>
+        <Ionicons
+          name={icon}
+          size={14}
+          color={gold ? colors.background : colors.mutedForeground}
+        />
+        <Text
+          style={{
+            fontSize: 13,
+            color: gold ? colors.background : colors.mutedForeground,
+            fontFamily: "sans-medium",
+          }}
+        >
+          {label}
+        </Text>
+      </View>
+      <Text
+        style={{
+          fontSize: 26,
+          color: valueColor ?? (gold ? colors.background : colors.primary),
+          fontFamily: "sans-extrabold",
+          lineHeight: 32,
+        }}
+      >
+        {value}
+      </Text>
+      {sub && (
+        <Text
+          style={{
+            fontSize: 12,
+            color: gold ? colors.background + "CC" : colors.mutedForeground,
+            fontFamily: "sans-regular",
+          }}
+        >
+          {sub}
+        </Text>
+      )}
+    </View>
+  );
+}
+
+// ─── Due Soon card ────────────────────────────────────────────────────────────
+
+function DueSoonCard({ sub }: { sub: Subscription }) {
+  const [imgError, setImgError] = useState(false);
   return (
     <View
       style={{
         backgroundColor: colors.card,
-        borderRadius: 16,
-        padding: 16,
-        flexDirection: "row",
-        alignItems: "center",
-        gap: 12,
+        borderRadius: 18,
+        padding: 14,
+        width: 130,
+        gap: 10,
       }}
     >
-      {/* ── Service logo ── */}
       <View
         style={{
-          width: 48,
-          height: 48,
+          width: 44,
+          height: 44,
           borderRadius: 12,
-          // Tint the icon background with the subscription's colour at 20% opacity
-          backgroundColor: sub.color ? sub.color + "33" : colors.muted,
+          backgroundColor: sub.color ? sub.color + "33" : colors.background,
           alignItems: "center",
           justifyContent: "center",
         }}
       >
         <Image
           source={imgError ? icons.wallet : sub.icon}
-          style={{ width: 32, height: 32, borderRadius: 6 }}
+          style={{ width: 28, height: 28, borderRadius: 6 }}
           resizeMode="contain"
           onError={() => setImgError(true)}
         />
       </View>
-
-      {/* ── Name + renewal date ── */}
-      <View style={{ flex: 1, minWidth: 0 }}>
-        <Text
-          numberOfLines={1}
-          style={{
-            fontSize: 16,
-            color: colors.primary,
-            fontFamily: "sans-semibold",
-            marginBottom: 4,
-          }}
-        >
-          {sub.name}
-        </Text>
-        <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
-          <Ionicons
-            name="calendar-outline"
-            size={12}
-            color={colors.mutedForeground}
-          />
-          <Text
-            style={{
-              fontSize: 12,
-              color: colors.mutedForeground,
-              fontFamily: "sans-regular",
-            }}
-          >
-            {dayjs(sub.renewalDate).format("MMM D")}
-          </Text>
-        </View>
-      </View>
-
-      {/* ── Price ── */}
       <Text
-        style={{
-          fontSize: 18,
-          color: colors.primary,
-          fontFamily: "sans-bold",
-        }}
+        numberOfLines={1}
+        style={{ fontSize: 14, color: colors.primary, fontFamily: "sans-semibold" }}
       >
-        {formatCurrency(sub.price, sub.currency)}
+        {sub.name}
       </Text>
+      <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+        <Ionicons name="calendar-outline" size={11} color={colors.mutedForeground} />
+        <Text style={{ fontSize: 12, color: colors.mutedForeground, fontFamily: "sans-regular" }}>
+          {dayjs(sub.renewalDate).format("D MMM")}
+        </Text>
+      </View>
     </View>
   );
-};
+}
 
-// ─── HomeScreen ───────────────────────────────────────────────────────────────
+// ─── Home screen ──────────────────────────────────────────────────────────────
 
-/**
- * HomeScreen
- * Root component for the Home tab.
- *
- * Reads the subscriptions list from Zustand to calculate the monthly total
- * and derive the 3 upcoming renewals shown in the card list.
- * Reads the authenticated user's name from Clerk.
- */
 export default function HomeScreen() {
   const { user } = useUser();
   const { subscriptions } = useSubscriptionsStore();
   const router = useRouter();
 
-  // Prefer first name; fall back to email prefix; fall back to "there".
   const displayName =
     user?.firstName ||
     user?.emailAddresses[0]?.emailAddress?.split("@")[0] ||
     "there";
 
-  // Sum all subscription prices for the spending card total.
   const totalMonthly = subscriptions.reduce((sum, s) => sum + s.price, 0);
 
-  // Show the 3 nearest FUTURE renewals only — past dates are excluded so
-  // newly added subscriptions (which always have future dates) can appear.
   const now = Date.now();
-  const upcomingSubs = [...subscriptions]
+  const activeCount = subscriptions.filter((s) => s.status !== "cancelled").length;
+
+  const upcomingThisWeek = subscriptions.filter((s) => {
+    if (!s.renewalDate) return false;
+    const diff = (new Date(s.renewalDate).getTime() - now) / 86_400_000;
+    return diff >= 0 && diff <= 7;
+  }).length;
+
+  // Due soon: next 5 future renewals sorted by date
+  const dueSoon = [...subscriptions]
     .filter((s) => s.renewalDate && new Date(s.renewalDate).getTime() > now)
-    .sort(
-      (a, b) =>
-        new Date(a.renewalDate ?? 0).getTime() -
-        new Date(b.renewalDate ?? 0).getTime()
-    )
-    .slice(0, 3);
+    .sort((a, b) => new Date(a.renewalDate!).getTime() - new Date(b.renewalDate!).getTime())
+    .slice(0, 5);
+
+  // Category breakdown for donut + legend
+  const categoryMap = subscriptions.reduce<Record<string, number>>((acc, s) => {
+    const cat = s.category?.trim() || "Other";
+    acc[cat] = (acc[cat] ?? 0) + s.price;
+    return acc;
+  }, {});
+
+  const sortedCategories = Object.entries(categoryMap)
+    .sort(([, a], [, b]) => b - a);
+
+  const topCategories = sortedCategories.slice(0, 3);
+  const otherTotal = sortedCategories.slice(3).reduce((s, [, v]) => s + v, 0);
+  if (otherTotal > 0) topCategories.push(["Other", otherTotal]);
+
+  const chartData: ChartSlice[] = topCategories.map(([label, value]) => ({
+    label,
+    value,
+    color: CATEGORY_COLORS[label] ?? CATEGORY_COLORS.Other,
+  }));
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={["top"]}>
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ padding: 24, paddingBottom: 120 }}
+        contentContainerStyle={{ padding: 20, paddingBottom: 120 }}
       >
 
         {/* ── Header ─────────────────────────────────────────────────────── */}
         <View
           style={{
             flexDirection: "row",
-            alignItems: "center",
+            alignItems: "flex-start",
             justifyContent: "space-between",
-            marginBottom: 24,
+            marginBottom: 20,
           }}
         >
-          {/* Left: greeting + user name */}
           <View>
-            <Text
-              style={{
-                fontSize: 14,
-                color: colors.mutedForeground,
-                fontFamily: "sans-regular",
-              }}
-            >
+            <Text style={{ fontSize: 14, color: colors.mutedForeground, fontFamily: "sans-regular" }}>
               Welcome back,
             </Text>
-            <Text
-              style={{
-                fontSize: 24,
-                color: colors.primary,
-                fontFamily: "sans-bold",
-              }}
-            >
+            <Text style={{ fontSize: 24, color: colors.primary, fontFamily: "sans-bold" }}>
               {displayName}
             </Text>
           </View>
-
-          {/* Right: settings icon — taps navigate to the Settings tab */}
           <Pressable
             onPress={() => router.navigate("/(tabs)/settings")}
-            accessibilityRole="button"
-            accessibilityLabel="Settings"
             style={{
               width: 40,
               height: 40,
@@ -223,139 +290,138 @@ export default function HomeScreen() {
               justifyContent: "center",
             }}
           >
-            <Ionicons
-              name="settings-outline"
-              size={20}
-              color={colors.primary}
-            />
+            <Ionicons name="settings-outline" size={20} color={colors.primary} />
           </Pressable>
         </View>
 
-        {/* ── Monthly Spending card ───────────────────────────────────────── */}
-        {/*
-         * Gold (#C9A84C) solid background — mirrors the Figma gradient card.
-         * All text and icons use colors.background (dark green) for contrast.
-         */}
+        {/* ── Stats grid row 1 ────────────────────────────────────────────── */}
+        <View style={{ flexDirection: "row", gap: 12, marginBottom: 12 }}>
+          <StatCard
+            label="Monthly"
+            value={formatCurrency(totalMonthly)}
+            icon="card-outline"
+            gold
+            flex={1.15}
+          />
+          <StatCard
+            label="Upcoming"
+            value={String(upcomingThisWeek)}
+            sub="This week"
+            icon="information-circle-outline"
+            flex={1}
+          />
+        </View>
+
+        {/* ── Stats grid row 2 ────────────────────────────────────────────── */}
+        <View style={{ flexDirection: "row", gap: 12, marginBottom: 20 }}>
+          <StatCard
+            label="Active"
+            value={String(activeCount)}
+            sub="Payments"
+            icon="cash-outline"
+            flex={1}
+          />
+          <StatCard
+            label="Change"
+            value={totalMonthly > 0 ? "+0.0%" : "—"}
+            sub="vs last month"
+            icon="trending-up-outline"
+            valueColor={colors.accent}
+            flex={1.15}
+          />
+        </View>
+
+        {/* ── Spending Overview ───────────────────────────────────────────── */}
         <View
           style={{
-            backgroundColor: colors.accent,
-            borderRadius: 24,
-            padding: 24,
-            marginBottom: 24,
+            backgroundColor: colors.card,
+            borderRadius: 20,
+            padding: 18,
+            marginBottom: 20,
           }}
         >
-          {/* Top row: card icon + label */}
           <View
             style={{
               flexDirection: "row",
+              justifyContent: "space-between",
               alignItems: "center",
-              gap: 6,
-              marginBottom: 8,
-            }}
-          >
-            <Ionicons
-              name="card-outline"
-              size={18}
-              color={colors.background}
-            />
-            <Text
-              style={{
-                fontSize: 14,
-                color: colors.background,
-                fontFamily: "sans-medium",
-              }}
-            >
-              Monthly Spending
-            </Text>
-          </View>
-
-          {/* Large total amount */}
-          <Text
-            style={{
-              fontSize: 40,
-              color: colors.background,
-              fontFamily: "sans-extrabold",
               marginBottom: 16,
             }}
           >
-            {formatCurrency(totalMonthly)}
-          </Text>
-
-          {/* Trend indicator */}
-          <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-            <Ionicons
-              name="trending-up-outline"
-              size={16}
-              color={colors.background}
-            />
-            <Text
-              style={{
-                fontSize: 12,
-                color: colors.background,
-                fontFamily: "sans-regular",
-                opacity: 0.85,
-              }}
-            >
-              +€5.99 from last month
+            <Text style={{ fontSize: 17, color: colors.primary, fontFamily: "sans-bold" }}>
+              Spending Overview
             </Text>
+            <Pressable
+              onPress={() => router.navigate("/(tabs)/subscriptions")}
+              style={{ flexDirection: "row", alignItems: "center", gap: 2 }}
+            >
+              <Text style={{ fontSize: 13, color: colors.accent, fontFamily: "sans-semibold" }}>
+                View All
+              </Text>
+              <Ionicons name="chevron-forward" size={14} color={colors.accent} />
+            </Pressable>
           </View>
+
+          {chartData.length === 0 ? (
+            <Text style={{ fontSize: 14, color: colors.mutedForeground, fontFamily: "sans-regular", textAlign: "center", paddingVertical: 16 }}>
+              Add payments to see your spending breakdown.
+            </Text>
+          ) : (
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 20 }}>
+              <DonutChart data={chartData} size={120} />
+              <View style={{ flex: 1, gap: 10 }}>
+                {chartData.map((slice) => (
+                  <View key={slice.label} style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+                    <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+                      <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: slice.color }} />
+                      <Text style={{ fontSize: 13, color: colors.primary, fontFamily: "sans-medium" }}>
+                        {slice.label}
+                      </Text>
+                    </View>
+                    <Text style={{ fontSize: 13, color: colors.primary, fontFamily: "sans-semibold" }}>
+                      {formatCurrency(slice.value)}
+                    </Text>
+                  </View>
+                ))}
+              </View>
+            </View>
+          )}
         </View>
 
-        {/* ── Upcoming Payments heading ───────────────────────────────────── */}
+        {/* ── Due Soon ────────────────────────────────────────────────────── */}
         <View
           style={{
             flexDirection: "row",
-            alignItems: "center",
             justifyContent: "space-between",
+            alignItems: "center",
             marginBottom: 12,
           }}
         >
-          <Text
-            style={{
-              fontSize: 18,
-              color: colors.primary,
-              fontFamily: "sans-semibold",
-            }}
-          >
-            Upcoming Payments
+          <Text style={{ fontSize: 17, color: colors.primary, fontFamily: "sans-bold" }}>
+            Due Soon
           </Text>
-
-          {/* "See all" navigates to the Bills tab */}
-          <Pressable
-            onPress={() => router.navigate("/(tabs)/subscriptions")}
-          >
-            <Text
-              style={{
-                fontSize: 14,
-                color: colors.accent,
-                fontFamily: "sans-medium",
-              }}
-            >
+          <Pressable onPress={() => router.navigate("/(tabs)/subscriptions")}>
+            <Text style={{ fontSize: 13, color: colors.accent, fontFamily: "sans-semibold" }}>
               See all
             </Text>
           </Pressable>
         </View>
 
-        {/* ── Upcoming payment rows ───────────────────────────────────────── */}
-        <View style={{ gap: 10 }}>
-          {upcomingSubs.length === 0 ? (
-            // Empty state — shown when the store has no subscriptions yet
-            <Text
-              style={{
-                fontSize: 14,
-                color: colors.mutedForeground,
-                fontFamily: "sans-medium",
-                paddingVertical: 16,
-              }}
-            >
-              No upcoming renewals yet.
-            </Text>
-          ) : (
-            upcomingSubs.map((sub) => (
-              <UpcomingRow key={sub.id} subscription={sub} />
-            ))
-          )}
-        </View>
+        {dueSoon.length === 0 ? (
+          <Text style={{ fontSize: 14, color: colors.mutedForeground, fontFamily: "sans-regular", paddingVertical: 8 }}>
+            No upcoming payments.
+          </Text>
+        ) : (
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={{ gap: 12, paddingRight: 4 }}
+          >
+            {dueSoon.map((sub) => (
+              <DueSoonCard key={sub.id} sub={sub} />
+            ))}
+          </ScrollView>
+        )}
 
       </ScrollView>
     </SafeAreaView>

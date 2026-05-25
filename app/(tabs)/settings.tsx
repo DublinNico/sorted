@@ -38,7 +38,8 @@ type SettingsItem = {
   icon: React.ComponentProps<typeof Ionicons>["name"];
   label: string;
   description: string;
-  route?: string;
+  /** Typed as a literal union — add entries here as screens are built. */
+  route?: "/profile" | "/notifications" | "/payment-methods";
 };
 
 /**
@@ -49,8 +50,8 @@ type SettingsItem = {
  */
 const SETTINGS_ITEMS: SettingsItem[] = [
   { icon: "person-outline",            label: "Profile",          description: "Manage your account",  route: "/profile" },
-  { icon: "notifications-outline",     label: "Notifications",    description: "Billing reminders"    },
-  { icon: "card-outline",              label: "Payment Methods",  description: "Manage cards"          },
+  { icon: "notifications-outline",     label: "Notifications",    description: "Billing reminders",   route: "/notifications" },
+  { icon: "card-outline",              label: "Payment Methods",  description: "Manage cards",         route: "/payment-methods" },
   { icon: "shield-checkmark-outline",  label: "Security",         description: "Password & privacy"   },
   { icon: "help-circle-outline",       label: "Help & Support",   description: "Get assistance"       },
 ];
@@ -215,7 +216,7 @@ const Settings = () => {
             <TouchableOpacity
               key={item.label}
               activeOpacity={item.route ? 0.7 : 1}
-              onPress={item.route ? () => router.push(item.route as any) : undefined}
+              onPress={item.route ? () => router.push(item.route!) : undefined}
               style={{
                 backgroundColor: colors.card,
                 borderRadius: 18,
@@ -412,6 +413,31 @@ const Settings = () => {
             Sign Out
           </Text>
         </TouchableOpacity>
+
+        {/* ── Dev-only: splash screen preview ────────────────────────────── */}
+        {__DEV__ && (
+          <TouchableOpacity
+            onPress={() => router.push("/splash-preview")}
+            activeOpacity={0.8}
+            style={{
+              marginTop: 10,
+              backgroundColor: colors.card,
+              borderWidth: 1,
+              borderColor: colors.accent + "40",
+              borderRadius: 18,
+              paddingVertical: 16,
+              flexDirection: "row",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: 10,
+            }}
+          >
+            <Ionicons name="phone-portrait-outline" size={20} color={colors.accent} />
+            <Text style={{ fontSize: 16, color: colors.accent, fontFamily: "sans-semibold" }}>
+              Preview Splash
+            </Text>
+          </TouchableOpacity>
+        )}
 
       </ScrollView>
     </SafeAreaView>

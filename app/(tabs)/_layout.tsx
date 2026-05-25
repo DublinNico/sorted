@@ -13,6 +13,9 @@
 import CreateSubscriptionModal from "@/components/CreateSubscriptionModal";
 import { colors } from "@/constants/theme";
 import { useSubscriptionsStore } from "@/store/subscriptionsStore";
+import { useSupabase } from "@/hooks/useSupabase";
+import { createSubscription as createSubscriptionService } from "@/services/subscriptions";
+import { useAuth } from "@clerk/expo";
 import { Ionicons } from "@expo/vector-icons";
 import type { BottomTabBarProps } from "@react-navigation/bottom-tabs";
 import { Tabs } from "expo-router";
@@ -163,14 +166,24 @@ const TabLayout = () => {
   const [modalVisible, setModalVisible] = useState(false);
 
   const { addSubscription } = useSubscriptionsStore();
+  const supabase = useSupabase();
+  const { userId } = useAuth();
 
   /**
    * handleAddSubscription
-   * Persists the new subscription to the Zustand store and dismisses the modal.
+   * Persists the new subscription to Supabase and updates the Zustand store.
    */
-  const handleAddSubscription = (subscription: Subscription) => {
-    addSubscription(subscription);
+  const handleAddSubscription = async (subscription: Subscription) => {
     setModalVisible(false);
+    addSubscription(subscription);
+    if (userId) {
+      try {
+        const saved = await createSubscriptionService(supabase, subscription, userId);
+        useSubscriptionsStore.getState().updateSubscription(saved);
+      } catch (err) {
+        console.error("Failed to sync subscription:", err);
+      }
+    }
   };
 
   return (
