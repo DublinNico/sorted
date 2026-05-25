@@ -3,10 +3,18 @@ import { ClerkProvider, useAuth, useUser } from "@clerk/expo";
 import { tokenCache } from "@clerk/expo/token-cache";
 import { SplashScreen, Stack, useRouter, useSegments, usePathname } from "expo-router";
 import { useFonts } from "expo-font";
-import { useEffect } from "react";
-import { ActivityIndicator, View } from "react-native";
-import { colors } from "@/constants/theme";
+import { useEffect, useState } from "react";
 import { PostHogProvider, usePostHog } from "posthog-react-native";
+import AppSplashScreen from "@/components/AppSplashScreen";
+import { useSupabase } from "@/hooks/useSupabase";
+import { fetchSubscriptions } from "@/services/subscriptions";
+import { upsertPushToken } from "@/services/pushTokens";
+import { useSubscriptionsStore } from "@/store/subscriptionsStore";
+import {
+  configureNotificationHandler,
+  setupAndroidChannel,
+  getExpoPushToken,
+} from "@/utils/notifications";
 
 const posthogKey = process.env.EXPO_PUBLIC_POSTHOG_KEY;
 const posthogHost = process.env.EXPO_PUBLIC_POSTHOG_HOST;
@@ -21,6 +29,8 @@ if (!publishableKey) {
 }
 
 SplashScreen.preventAutoHideAsync().catch(console.error);
+
+configureNotificationHandler();
 
 function ScreenTracker() {
   const pathname = usePathname();
@@ -43,6 +53,46 @@ function ScreenTracker() {
   return null;
 }
 
+function DataLoader() {
+  const { isSignedIn, userId } = useAuth();
+  const supabase = useSupabase();
+  const { setSubscriptions, setLoading, resetSubscriptions } = useSubscriptionsStore();
+
+  useEffect(() => {
+    if (!isSignedIn || !userId) {
+      resetSubscriptions();
+      return;
+    }
+
+    let cancelled = false;
+
+    const load = async () => {
+      setLoading(true);
+      try {
+        await setupAndroidChannel();
+        const [subs, token] = await Promise.all([
+          fetchSubscriptions(supabase, userId),
+          getExpoPushToken(),
+        ]);
+        if (cancelled) return;
+        setSubscriptions(subs);
+        if (token) {
+          upsertPushToken(supabase, userId, token).catch(console.error);
+        }
+      } catch (err) {
+        console.error("DataLoader error:", err);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    };
+
+    load();
+    return () => { cancelled = true; };
+  }, [isSignedIn, userId]);
+
+  return null;
+}
+
 function InitialLayout() {
   const { isSignedIn, isLoaded } = useAuth();
   const segments = useSegments();
@@ -50,6 +100,9 @@ function InitialLayout() {
 
   useEffect(() => {
     if (!isLoaded) return;
+
+    // Never redirect away from the dev splash preview screen.
+    if (segments[0] === "splash-preview") return;
 
     const inAuthGroup = segments[0] === "(auth)";
 
@@ -61,11 +114,7 @@ function InitialLayout() {
   }, [isSignedIn, isLoaded, segments]);
 
   if (!isLoaded) {
-    return (
-      <View style={{ flex: 1, backgroundColor: colors.background, alignItems: "center", justifyContent: "center" }}>
-        <ActivityIndicator size="large" color={colors.accent} />
-      </View>
-    );
+    return <AppSplashScreen />;
   }
 
   return <Stack screenOptions={{ headerShown: false }} />;
@@ -73,24 +122,34 @@ function InitialLayout() {
 
 export default function RootLayout() {
   const [fontsLoaded] = useFonts({
-    "sans-regular": require("../assets/assets/fonts/PlusJakartaSans-Regular.ttf"),
-    "sans-bold": require("../assets/assets/fonts/PlusJakartaSans-Bold.ttf"),
-    "sans-medium": require("../assets/assets/fonts/PlusJakartaSans-Medium.ttf"),
-    "sans-semibold": require("../assets/assets/fonts/PlusJakartaSans-SemiBold.ttf"),
+    "sans-regular":   require("../assets/assets/fonts/PlusJakartaSans-Regular.ttf"),
+    "sans-bold":      require("../assets/assets/fonts/PlusJakartaSans-Bold.ttf"),
+    "sans-medium":    require("../assets/assets/fonts/PlusJakartaSans-Medium.ttf"),
+    "sans-semibold":  require("../assets/assets/fonts/PlusJakartaSans-SemiBold.ttf"),
     "sans-extrabold": require("../assets/assets/fonts/PlusJakartaSans-ExtraBold.ttf"),
-    "sans-light": require("../assets/assets/fonts/PlusJakartaSans-Light.ttf"),
+    "sans-light":     require("../assets/assets/fonts/PlusJakartaSans-Light.ttf"),
   });
 
+  // Enforce a minimum 2-second splash so the animation is always visible.
+  const [minDelayPassed, setMinDelayPassed] = useState(false);
   useEffect(() => {
-    if (fontsLoaded) SplashScreen.hideAsync();
-  }, [fontsLoaded]);
+    const timer = setTimeout(() => setMinDelayPassed(true), 2000);
+    return () => clearTimeout(timer);
+  }, []);
 
-  if (!fontsLoaded) return null;
+  const ready = fontsLoaded && minDelayPassed;
+
+  useEffect(() => {
+    if (ready) SplashScreen.hideAsync();
+  }, [ready]);
+
+  if (!ready) return <AppSplashScreen />;
 
   return (
     <PostHogProvider apiKey={posthogKey} options={{ host: posthogHost }}>
       <ClerkProvider publishableKey={publishableKey} tokenCache={tokenCache}>
         <ScreenTracker />
+        <DataLoader />
         <InitialLayout />
       </ClerkProvider>
     </PostHogProvider>
