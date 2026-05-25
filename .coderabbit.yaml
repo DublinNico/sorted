@@ -1,0 +1,55 @@
+# .coderabbit.yaml
+# CodeRabbit configuration for the SubTrack mobile app.
+# Docs: https://docs.coderabbit.ai/getting-started/configure-coderabbit
+
+language: "en-US"
+
+reviews:
+  # Automatically review every PR (excluding drafts)
+  auto_review:
+    enabled: true
+    drafts: false
+
+  # Post a high-level summary comment at the top of each PR review
+  summary: true
+
+  # Ask CodeRabbit to suggest how to improve comments/docs in the diff
+  review_comments:
+    enabled: true
+
+  # Focus areas — tell CodeRabbit what matters most for this project
+  path_instructions:
+    - path: "app/**"
+      instructions: >
+        This is an Expo / React Native app using NativeWind (Tailwind) for
+        styling and Expo Router for navigation. Flag any web-only APIs
+        (e.g. document, window, CSS strings) used inside React Native
+        components. Check that SafeAreaView is used correctly and that
+        ScrollView contentContainerStyle includes enough bottom padding
+        for the tab bar.
+
+    - path: "components/**"
+      instructions: >
+        Components should use inline styles with values from
+        constants/theme.ts (colors, spacing) rather than hardcoded hex
+        values. Flag any hardcoded colour literals that should reference
+        the theme tokens.
+
+    - path: "store/**"
+      instructions: >
+        This is a Zustand store. Check for missing state resets, mutation
+        of state directly (instead of via set()), and any async side
+        effects that should be handled outside the store.
+
+    - path: "app/(auth)/**"
+      instructions: >
+        Auth screens use Clerk (@clerk/expo). Ensure error messages are
+        surfaced to the user, loading states disable buttons, and no
+        credentials are logged or stored in plaintext.
+
+  # Ignore generated / lock files in reviews
+  ignore_files:
+    - "package-lock.json"
+    - "node_modules/**"
+    - "*.lock"
+    - ".expo/**"

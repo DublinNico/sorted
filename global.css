@@ -1,39 +1,563 @@
+/**
+ * global.css
+ * App-wide stylesheet for NativeWind / Tailwind CSS.
+ *
+ * Structure:
+ *  1. Tailwind / NativeWind imports
+ *  2. @theme  — design tokens (colours, spacing, fonts) consumed by Tailwind utilities
+ *  3. @layer components — reusable semantic class names used throughout the app
+ *
+ * Colour palette (Figma "High-Fidelity Android UI Mockup"):
+ *   #0B3D2E  background   dark green
+ *   #0F4D39  card         medium green
+ *   #C9A84C  accent       gold
+ *   #F5F0E8  primary      cream text
+ */
+
+/* --- Tailwind / NativeWind core imports --- */
 @import "tailwindcss/theme.css" layer(theme);
 @import "tailwindcss/preflight.css" layer(base);
 @import "tailwindcss/utilities.css";
 
 @import "nativewind/theme";
 
+/* ─────────────────────────────────────────────────────────────
+   @theme — Design tokens
+   These CSS custom properties are picked up by Tailwind and
+   exposed as utility classes (e.g. bg-background, text-accent).
+   ───────────────────────────────────────────────────────────── */
 @theme {
-  --color-background: #fff9e3;
-  --color-foreground: #081126;
-  --color-card: #fff8e7;
-  --color-muted: #f6eecf;
-  --color-muted-foreground: rgba(0, 0, 0, 0.6);
-  --color-primary: #081126;
-  --color-accent: #ea7a53;
-  --color-border: rgba(0, 0, 0, 0.1);
-  --color-success: #16a34a;
-  --color-destructive: #dc2626;
-  --color-subscription: #8fd1bd;
+    /* Colours */
+    --color-background: #0B3D2E;                    /* Dark green — screen background */
+    --color-foreground: #F5F0E8;                    /* Cream — default text on dark */
+    --color-card: #0F4D39;                          /* Medium green — card surface */
+    --color-muted: #0F4D39;                         /* Same as card; muted surfaces */
+    --color-muted-foreground: rgba(245, 240, 232, 0.6); /* 60% cream — secondary text */
+    --color-primary: #F5F0E8;                       /* Cream — primary text */
+    --color-accent: #C9A84C;                        /* Gold — buttons, active states */
+    --color-border: rgba(245, 240, 232, 0.1);       /* Subtle cream border */
+    --color-success: #16a34a;                       /* Green — success indicators */
+    --color-destructive: #d4183d;                   /* Red — delete / error states */
+    --color-subscription: #1a5c46;                  /* Lighter green — expanded card bg */
 
-  --spacing-0: 0px;
-  --spacing-1: 4px;
-  --spacing-2: 8px;
-  --spacing-3: 12px;
-  --spacing-4: 16px;
-  --spacing-5: 20px;
-  --spacing-6: 24px;
-  --spacing-7: 28px;
-  --spacing-8: 32px;
-  --spacing-9: 36px;
-  --spacing-10: 40px;
-  --spacing-11: 44px;
-  --spacing-12: 48px;
-  --spacing-14: 56px;
-  --spacing-16: 64px;
-  --spacing-18: 72px;
-  --spacing-20: 80px;
-  --spacing-24: 96px;
-  --spacing-30: 120px;
+    /* Spacing scale — 4pt base grid */
+    --spacing-0: 0px;
+    --spacing-1: 4px;
+    --spacing-2: 8px;
+    --spacing-3: 12px;
+    --spacing-4: 16px;
+    --spacing-5: 20px;
+    --spacing-6: 24px;
+    --spacing-7: 28px;
+    --spacing-8: 32px;
+    --spacing-9: 36px;
+    --spacing-10: 40px;
+    --spacing-11: 44px;
+    --spacing-12: 48px;
+    --spacing-14: 56px;
+    --spacing-16: 64px;
+    --spacing-18: 72px;
+    --spacing-20: 80px;
+    --spacing-24: 96px;
+    --spacing-30: 120px;
+
+    /* Typography — Plus Jakarta Sans loaded in app/_layout.tsx */
+    --font-sans: sans-regular;
+    --font-sans-light: sans-light;
+    --font-sans-medium: sans-medium;
+    --font-sans-semibold: sans-semibold;
+    --font-sans-bold: sans-bold;
+    --font-sans-extrabold: sans-extrabold;
+}
+
+/* ─────────────────────────────────────────────────────────────
+   @layer components — Semantic utility classes
+   Grouped by feature area. Each class composes Tailwind utilities
+   so that JSX stays clean and theme changes propagate automatically.
+   ───────────────────────────────────────────────────────────── */
+@layer components {
+
+    /* ── Tab bar ─────────────────────────────────────────────── */
+
+    /* Outer wrapper for a single tab icon; centres content */
+    .tabs-icon {
+        @apply size-12 items-center justify-center;
+    }
+
+    /* Transparent pill container (used when tab is inactive) */
+    .tabs-pill {
+        @apply size-12 items-center justify-center rounded-full bg-transparent;
+    }
+
+    /* Gold background applied to the active tab pill */
+    .tabs-active {
+        @apply bg-accent;
+    }
+
+    /* Icon image inside a tab item */
+    .tabs-glyph {
+        @apply size-6;
+    }
+
+    /* ── Home screen ─────────────────────────────────────────── */
+
+    /* Top row: avatar + user name on the left, add icon on the right */
+    .home-header {
+        @apply mb-[10px] flex-row items-center justify-between;
+    }
+
+    /* Left side of the header: avatar + name */
+    .home-user {
+        @apply flex-row items-center;
+    }
+
+    /* Circular user avatar image */
+    .home-avatar {
+        @apply size-16 rounded-full;
+    }
+
+    /* User's display name next to the avatar */
+    .home-user-name {
+        @apply ml-4 text-2xl font-sans-bold text-primary;
+    }
+
+    /* Plus / add icon button in the header */
+    .home-add-icon {
+        @apply size-12;
+    }
+
+    /* Gold balance summary card with asymmetric rounded corners */
+    .home-balance-card {
+        @apply my-[10px] min-h-[200px] justify-between gap-5 rounded-bl-4xl rounded-tr-4xl bg-accent p-6;
+    }
+
+    /* "Balance" label inside the balance card */
+    .home-balance-label {
+        @apply text-xl font-sans-semibold text-white/80;
+    }
+
+    /* Row containing the amount and renewal date */
+    .home-balance-row {
+        @apply flex-row items-center justify-between;
+    }
+
+    /* Large currency amount in the balance card */
+    .home-balance-amount {
+        @apply text-4xl font-sans-extrabold text-white;
+    }
+
+    /* Renewal date shown alongside the balance amount */
+    .home-balance-date {
+        @apply text-xl font-sans-medium text-white;
+    }
+
+    /* Shown when there are no items in a list */
+    .home-empty-state {
+        @apply py-4 text-sm font-sans-medium text-muted-foreground;
+    }
+
+    /* ── List heading (used on Home and Subscriptions) ────────── */
+
+    /* Row containing the section title and optional action button */
+    .list-head {
+        @apply my-5 flex-row items-center justify-between;
+    }
+
+    /* Section title text (e.g. "Upcoming", "All Subscriptions") */
+    .list-title {
+        @apply text-2xl font-sans-bold text-primary;
+    }
+
+    /* "See all" pill button next to the section title */
+    .list-action {
+        @apply rounded-full border border-border px-4 py-1;
+    }
+
+    /* Text inside the list action button */
+    .list-action-text {
+        @apply text-lg font-sans-semibold text-primary;
+    }
+
+    /* ── Upcoming subscription card (horizontal scroll) ─────── */
+
+    /* Individual card in the upcoming payments horizontal list */
+    .upcoming-card {
+        @apply mr-4 w-[196px] rounded-2xl border border-border bg-card p-4;
+    }
+
+    /* Icon + metadata row inside the upcoming card */
+    .upcoming-row {
+        @apply flex-row items-center gap-3;
+    }
+
+    /* Service logo icon inside the upcoming card */
+    .upcoming-icon {
+        @apply size-10;
+    }
+
+    /* Price text in the upcoming card */
+    .upcoming-price {
+        @apply text-lg font-sans-bold text-primary;
+    }
+
+    /* Days-remaining label in the upcoming card */
+    .upcoming-meta {
+        @apply text-sm font-sans-semibold text-muted-foreground;
+    }
+
+    /* Service name below the icon row in the upcoming card */
+    .upcoming-name {
+        @apply mt-1 text-sm font-sans-bold text-primary;
+    }
+
+    /* ── Subscription card (vertical list) ───────────────────── */
+
+    /* Outer card container; border colour provided by the card's colour prop */
+    .sub-card {
+        @apply rounded-2xl border border-border p-4;
+    }
+
+    /* Background applied when the card is in expanded/detail state */
+    .sub-card-expanded {
+        @apply bg-subscription;
+    }
+
+    /* Top row: icon + name/meta on left, price on right */
+    .sub-head {
+        @apply flex-row items-center py-2;
+    }
+
+    /* Left group: icon + text; min-w-0 allows inner text to truncate */
+    .sub-main {
+        @apply min-w-0 flex-1 flex-row items-center gap-3;
+    }
+
+    /* Service logo image */
+    .sub-icon {
+        @apply size-16 rounded-lg;
+    }
+
+    /* Wrapper for name and secondary meta text; flex-1 with min-w-0 for truncation */
+    .sub-copy {
+        @apply min-w-0 flex-1;
+    }
+
+    /* Service name — primary text */
+    .sub-title {
+        @apply mb-1 text-lg font-sans-bold text-primary;
+    }
+
+    /* Secondary line: category, plan, or renewal date */
+    .sub-meta {
+        @apply text-sm font-sans-semibold text-muted-foreground;
+    }
+
+    /* Right-aligned price + billing frequency group */
+    .sub-price-box {
+        @apply ml-3 shrink-0 items-end;
+    }
+
+    /* Subscription price value */
+    .sub-price {
+        @apply mb-1 text-lg font-sans-bold text-primary;
+    }
+
+    /* Billing frequency label (e.g. "Monthly") */
+    .sub-billing {
+        @apply text-sm font-sans-medium text-muted-foreground;
+    }
+
+    /* Expanded detail body shown below the card header */
+    .sub-body {
+        @apply mt-6 gap-4;
+    }
+
+    /* Vertical stack of detail rows inside the expanded body */
+    .sub-details {
+        @apply gap-6;
+    }
+
+    /* Single detail row (label + value side by side) */
+    .sub-row {
+        @apply flex-row items-center justify-between gap-3;
+    }
+
+    /* Label + value pair inside a detail row; min-w-0 for truncation */
+    .sub-row-copy {
+        @apply min-w-0 flex-1 flex-row items-center gap-2;
+    }
+
+    /* Detail field label (e.g. "Category:", "Started:") */
+    .sub-label {
+        @apply shrink-0 text-base font-sans-medium text-muted-foreground;
+    }
+
+    /* Detail field value; truncates if too long */
+    .sub-value {
+        @apply flex-1 font-sans-bold text-primary;
+    }
+
+    /* Red "Delete Subscription" button inside expanded card */
+    .sub-cancel {
+        @apply mt-2 items-center rounded-full bg-destructive py-4;
+    }
+
+    /* Disabled state for the cancel button */
+    .sub-cancel-disabled {
+        @apply bg-destructive/35;
+    }
+
+    /* White text label inside the cancel button */
+    .sub-cancel-text {
+        @apply font-sans-bold text-white;
+    }
+
+    /* ── Auth screens (Sign In / Sign Up) ────────────────────── */
+
+    /* Safe area wrapper for auth screens */
+    .auth-safe-area {
+        @apply flex-1 bg-background;
+    }
+
+    /* Full-screen container for auth flow */
+    .auth-screen {
+        @apply flex-1 bg-background;
+    }
+
+    /* ScrollView inside auth screens */
+    .auth-scroll {
+        @apply flex-1;
+    }
+
+    /* Inner content padding inside the auth scroll view */
+    .auth-content {
+        @apply grow px-5 pb-10 pt-8;
+    }
+
+    /* Centred brand logo + wordmark block */
+    .auth-brand-block {
+        @apply mt-2 items-center;
+    }
+
+    /* Row containing the logo mark and wordmark text */
+    .auth-logo-wrap {
+        @apply mb-7 flex-row items-center gap-3;
+    }
+
+    /* Gold square with rounded corners — the "S" logo mark */
+    .auth-logo-mark {
+        @apply relative size-14 items-center justify-center rounded-2xl bg-accent;
+    }
+
+    /* "S" letter inside the gold logo mark; dark green so it reads on gold */
+    .auth-logo-mark-text {
+        @apply text-2xl font-sans-extrabold text-background;
+    }
+
+    /* "SubTrack" wordmark text */
+    .auth-wordmark {
+        @apply text-3xl font-sans-extrabold text-primary;
+    }
+
+    /* "Smart Billing" subtitle below the wordmark */
+    .auth-wordmark-sub {
+        @apply -mt-1 text-xs font-sans-semibold uppercase tracking-[1px] text-muted-foreground;
+    }
+
+    /* Large screen title (e.g. "Welcome back") */
+    .auth-title {
+        @apply text-3xl font-sans-bold text-primary;
+    }
+
+    /* Subtitle / description below the screen title */
+    .auth-subtitle {
+        @apply mt-2 max-w-[320px] text-center text-base font-sans-medium text-muted-foreground;
+    }
+
+    /* Card container wrapping the form fields */
+    .auth-card {
+        @apply mt-8 rounded-3xl border border-border bg-card p-5;
+    }
+
+    /* Vertical stack of form fields */
+    .auth-form {
+        @apply gap-4;
+    }
+
+    /* Individual field wrapper (label + input) */
+    .auth-field {
+        @apply gap-2;
+    }
+
+    /* Field label text */
+    .auth-label {
+        @apply text-sm font-sans-semibold text-primary;
+    }
+
+    /* Text input — dark green background so it contrasts against the card */
+    .auth-input {
+        @apply rounded-2xl border border-border bg-background px-4 py-4 text-base font-sans-medium text-primary;
+    }
+
+    /* Red border applied to an input when it has a validation error */
+    .auth-input-error {
+        @apply border-destructive;
+    }
+
+    /* Inline error message below a field */
+    .auth-error {
+        @apply text-xs font-sans-medium text-destructive;
+    }
+
+    /* Helper / hint text below a field */
+    .auth-helper {
+        @apply text-sm font-sans-medium text-muted-foreground;
+    }
+
+    /* Primary gold CTA button */
+    .auth-button {
+        @apply mt-1 items-center rounded-2xl bg-accent py-4;
+    }
+
+    /* Dimmed button when the form is incomplete / loading */
+    .auth-button-disabled {
+        @apply bg-accent/45;
+    }
+
+    /* Dark green text on the gold button — ensures legible contrast */
+    .auth-button-text {
+        @apply text-base font-sans-bold text-background;
+    }
+
+    /* Ghost / secondary action button (e.g. "Resend code") */
+    .auth-secondary-button {
+        @apply items-center rounded-2xl border border-accent/30 bg-accent/10 py-3;
+    }
+
+    /* Gold text on the secondary button */
+    .auth-secondary-button-text {
+        @apply text-sm font-sans-semibold text-accent;
+    }
+
+    /* "or" divider row between primary and secondary actions */
+    .auth-divider-row {
+        @apply my-4 flex-row items-center gap-3;
+    }
+
+    /* Horizontal line on each side of the "or" label */
+    .auth-divider-line {
+        @apply h-px flex-1 bg-border;
+    }
+
+    /* "or" label text */
+    .auth-divider-text {
+        @apply text-[11px] font-sans-semibold uppercase tracking-[1px] text-muted-foreground;
+    }
+
+    /* "Don't have an account? Sign Up" row at the bottom of the screen */
+    .auth-link-row {
+        @apply mt-5 flex-row items-center justify-center gap-1;
+    }
+
+    /* Plain text part of the link row (e.g. "Don't have an account?") */
+    .auth-link-copy {
+        @apply text-sm font-sans-medium text-muted-foreground;
+    }
+
+    /* Gold tappable link in the link row */
+    .auth-link {
+        @apply text-sm font-sans-bold text-accent;
+    }
+
+    /* ── Add Subscription modal ───────────────────────────────── */
+
+    /* Semi-transparent black backdrop behind the bottom sheet */
+    .modal-overlay {
+        @apply flex-1 bg-black/50;
+    }
+
+    /* The bottom sheet panel itself; slides up from the bottom */
+    .modal-container {
+        /* bg-card (#0F4D39) lifts the sheet above the bg-background (#0B3D2E) backdrop */
+        @apply mt-auto max-h-[85%] rounded-t-3xl bg-card;
+    }
+
+    /* Header row inside the modal: title + close button */
+    .modal-header {
+        @apply flex-row items-center justify-between border-b border-border px-5 py-4;
+    }
+
+    /* Modal heading text */
+    .modal-title {
+        @apply text-xl font-sans-bold text-primary;
+    }
+
+    /* Circular close (✕) button */
+    .modal-close {
+        @apply size-8 items-center justify-center rounded-full bg-muted;
+    }
+
+    /* ✕ glyph inside the close button */
+    .modal-close-text {
+        @apply text-lg font-sans-bold text-primary;
+    }
+
+    /* Padded content area inside the modal */
+    .modal-body {
+        @apply gap-5 p-5;
+    }
+
+    /* ── Frequency / billing-cycle picker ────────────────────── */
+
+    /* Row of segmented picker options (Weekly / Monthly / Yearly) */
+    .picker-row {
+        @apply flex-row gap-3;
+    }
+
+    /* Individual picker option button */
+    .picker-option {
+        @apply flex-1 items-center rounded-2xl border border-border bg-background py-3;
+    }
+
+    /* Highlighted state when the option is selected */
+    .picker-option-active {
+        @apply border-accent bg-accent/10;
+    }
+
+    /* Label text inside a picker option */
+    .picker-option-text {
+        @apply text-sm font-sans-semibold text-muted-foreground;
+    }
+
+    /* Gold text when the picker option is active */
+    .picker-option-text-active {
+        @apply text-accent;
+    }
+
+    /* ── Category chip selector ───────────────────────────────── */
+
+    /* Wrapping flex container for the chip group */
+    .category-scroll {
+        @apply flex-row flex-wrap gap-2;
+    }
+
+    /* Individual category chip (pill-shaped toggle) */
+    .category-chip {
+        @apply rounded-full border border-border bg-background px-4 py-2;
+    }
+
+    /* Highlighted state when the chip is selected */
+    .category-chip-active {
+        @apply border-accent bg-accent/10;
+    }
+
+    /* Label text inside a chip */
+    .category-chip-text {
+        @apply text-sm font-sans-semibold text-muted-foreground;
+    }
+
+    /* Gold text when the chip is active */
+    .category-chip-text-active {
+        @apply text-accent;
+    }
 }
