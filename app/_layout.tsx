@@ -12,6 +12,7 @@ import AppSplashScreen from "@/components/AppSplashScreen";
 import { useSupabase } from "@/hooks/useSupabase";
 import { fetchSubscriptions } from "@/services/subscriptions";
 import { upsertPushToken } from "@/services/pushTokens";
+import { fetchMonthlySnapshots, upsertMonthlySnapshot } from "@/services/monthlySnapshots";
 import { useSubscriptionsStore } from "@/store/subscriptionsStore";
 import {
   configureNotificationHandler,
@@ -73,7 +74,7 @@ function ScreenTracker() {
 function DataLoader() {
   const { isSignedIn, userId } = useAuth();
   const supabase = useSupabase();
-  const { setSubscriptions, setLoading, resetSubscriptions } = useSubscriptionsStore();
+  const { setSubscriptions, setLoading, resetSubscriptions, setMonthlySnapshots } = useSubscriptionsStore();
 
   useEffect(() => {
     if (!isSignedIn || !userId) {
@@ -87,15 +88,20 @@ function DataLoader() {
       setLoading(true);
       try {
         await setupAndroidChannel();
-        const [subs, token] = await Promise.all([
+        const [subs, token, snapshots] = await Promise.all([
           fetchSubscriptions(supabase, userId),
           getExpoPushToken(),
+          fetchMonthlySnapshots(supabase, userId),
         ]);
         if (cancelled) return;
         setSubscriptions(subs);
+        setMonthlySnapshots(snapshots);
         if (token) {
           upsertPushToken(supabase, userId, token).catch(console.error);
         }
+        const now = new Date();
+        const total = subs.reduce((sum, s) => sum + s.price, 0);
+        upsertMonthlySnapshot(supabase, userId, now.getFullYear(), now.getMonth() + 1, total).catch(console.error);
       } catch (err) {
         console.error("DataLoader error:", err);
       } finally {

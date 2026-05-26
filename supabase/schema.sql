@@ -124,18 +124,48 @@ create trigger notification_preferences_updated_at
   for each row execute function public.set_updated_at();
 
 -- ---------------------------------------------------------------------------
--- 6. pg_cron job — runs send-reminders at 09:00 UTC every day
---    Replace <PROJECT_REF> with your Supabase project ref (e.g. abcdefghijkl).
---    Replace <SERVICE_ROLE_KEY> with your Supabase service role key.
+-- 6. monthly_snapshots
 -- ---------------------------------------------------------------------------
--- select cron.schedule(
---   'send-payment-reminders',
---   '0 9 * * *',
---   $$
---     select net.http_post(
---       url    := 'https://<PROJECT_REF>.supabase.co/functions/v1/send-reminders',
---       headers:= '{"Authorization": "Bearer <SERVICE_ROLE_KEY>", "Content-Type": "application/json"}'::jsonb,
---       body   := '{}'::jsonb
---     )
---   $$
--- );
+create table if not exists public.monthly_snapshots (
+  id           uuid primary key default gen_random_uuid(),
+  user_id      text not null,
+  year         integer not null,
+  month        integer not null check (month between 1 and 12),
+  total_amount numeric(10, 2) not null default 0,
+  created_at   timestamptz not null default now(),
+  updated_at   timestamptz not null default now(),
+  unique (user_id, year, month)
+);
+
+alter table public.monthly_snapshots enable row level security;
+
+drop policy if exists "users can manage own monthly snapshots" on public.monthly_snapshots;
+
+create policy "users can manage own monthly snapshots"
+  on public.monthly_snapshots for all
+  using ((auth.jwt() ->> 'sub') = user_id);
+
+drop trigger if exists monthly_snapshots_updated_at on public.monthly_snapshots;
+
+create trigger monthly_snapshots_updated_at
+  before update on public.monthly_snapshots
+  for each row execute function public.set_updated_at();
+
+-- ---------------------------------------------------------------------------
+-- 7. pg_cron job — runs send-reminders at 09:00 UTC every day
+--    Replace <SERVICE_ROLE_KEY> with your service role key from:
+--    Supabase Dashboard → Settings → API → service_role (secret)
+-- ---------------------------------------------------------------------------
+select cron.unschedule('send-payment-reminders');
+
+select cron.schedule(
+  'send-payment-reminders',
+  '0 9 * * *',
+  $$
+    select net.http_post(
+      url    := 'https://pufzwcpxorlvpkkpjypr.supabase.co/functions/v1/send-reminders',
+      headers:= '{"Authorization": "Bearer <SERVICE_ROLE_KEY>", "Content-Type": "application/json"}'::jsonb,
+      body   := '{}'::jsonb
+    )
+  $$
+);

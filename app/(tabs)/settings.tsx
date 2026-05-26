@@ -35,6 +35,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
  * `route` is optional — only rows with a built screen have a route defined.
  */
 type SettingsItem = {
+  id: string;
   icon: React.ComponentProps<typeof Ionicons>["name"];
   label: string;
   description: string;
@@ -49,11 +50,10 @@ type SettingsItem = {
  * are built.
  */
 const SETTINGS_ITEMS: SettingsItem[] = [
-  { icon: "person-outline",            label: "Profile",          description: "Manage your account",  route: "/profile" },
-  { icon: "notifications-outline",     label: "Notifications",    description: "Billing reminders",   route: "/notifications" },
-  { icon: "card-outline",              label: "Payment Methods",  description: "Manage cards",         route: "/payment-methods" },
-  { icon: "shield-checkmark-outline",  label: "Security",         description: "Password & privacy",  route: "/security" },
-  { icon: "help-circle-outline",       label: "Help & Support",   description: "Get assistance",       route: "/help-support" },
+  { id: "notifications",    icon: "notifications-outline",     label: "Notifications",    description: "Billing reminders",   route: "/notifications" },
+  { id: "payment-methods",  icon: "card-outline",              label: "Payment Methods",  description: "Manage cards",         route: "/payment-methods" },
+  { id: "security",         icon: "shield-checkmark-outline",  label: "Security",         description: "Password & privacy",  route: "/security" },
+  { id: "help-support",     icon: "help-circle-outline",       label: "Help & Support",   description: "Get assistance",       route: "/help-support" },
 ];
 
 // ─── Helper ───────────────────────────────────────────────────────────────────
@@ -215,7 +215,7 @@ const Settings = () => {
           {SETTINGS_ITEMS.map((item) => (
             <TouchableOpacity
               key={item.label}
-              testID={`settings-row-${item.label.toLowerCase().replace(/\s/g, '-')}`}
+              testID={`settings-row-${item.id}`}
               activeOpacity={item.route ? 0.7 : 1}
               onPress={item.route ? () => router.push(item.route!) : undefined}
               style={{

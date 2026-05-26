@@ -211,7 +211,7 @@ function DueSoonCard({ sub }: { sub: Subscription }) {
 
 export default function HomeScreen() {
   const { user } = useUser();
-  const { subscriptions } = useSubscriptionsStore();
+  const { subscriptions, monthlySnapshots } = useSubscriptionsStore();
   const router = useRouter();
 
   const displayName =
@@ -223,6 +223,16 @@ export default function HomeScreen() {
 
   const now = Date.now();
   const activeCount = subscriptions.filter((s) => s.status !== "cancelled").length;
+
+  // Month-over-month change derived from real Supabase snapshots.
+  const monthlyChange = (() => {
+    if (monthlySnapshots.length < 2) return null;
+    const prev = monthlySnapshots[monthlySnapshots.length - 2].totalAmount;
+    const curr = monthlySnapshots[monthlySnapshots.length - 1].totalAmount;
+    if (prev === 0) return null;
+    const pct = ((curr - prev) / prev) * 100;
+    return `${pct >= 0 ? "+" : ""}${pct.toFixed(1)}%`;
+  })();
 
   // Due soon: next 5 future renewals sorted by date
   const dueSoon = [...subscriptions]
@@ -309,10 +319,10 @@ export default function HomeScreen() {
           />
           <StatCard
             label="Change"
-            value={totalMonthly > 0 ? "+0.0%" : "—"}
+            value={monthlyChange ?? "—"}
             sub="vs last month"
             icon="trending-up-outline"
-            valueColor={colors.accent}
+            valueColor={monthlyChange ? colors.accent : colors.mutedForeground}
           />
         </View>
 

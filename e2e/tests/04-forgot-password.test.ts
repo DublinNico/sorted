@@ -56,8 +56,8 @@ async function signOut() {
 
 describe('Forgot Password Flow', () => {
 
-  // Skip the entire suite if the reset code has not been pre-set.
-  const skip = !RESET_CODE || !NEW_PASSWORD;
+  // Skip the entire suite if required credentials are not pre-set.
+  const skip = !EMAIL || !RESET_CODE || !NEW_PASSWORD;
 
   beforeAll(async () => {
     await device.launchApp({ newInstance: true });

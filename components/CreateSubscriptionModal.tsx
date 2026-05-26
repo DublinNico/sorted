@@ -133,6 +133,7 @@ const CATEGORY_TO_PAYMENT_TYPE: Partial<Record<string, PaymentType>> = {
   "Utilities":     "Utility - Electricity",
   "Entertainment": "Subscription - Entertainment",
   "Productivity":  "Subscription - Productivity",
+  "Fitness":       "Gym Membership",
 };
 
 // ─── Colour palette ───────────────────────────────────────────────────────────

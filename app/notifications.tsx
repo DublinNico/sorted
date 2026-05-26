@@ -19,110 +19,13 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-// ─── Types ────────────────────────────────────────────────────────────────────
+// ─── Days-before option ───────────────────────────────────────────────────────
 
-interface LocalPrefs {
-  pushEnabled: boolean;
-  emailEnabled: boolean;
-  smsEnabled: boolean;
-  upcomingEnabled: boolean;
-  weeklySummary: boolean;
-  priceChanges: boolean;
-}
-
-const DEFAULTS: LocalPrefs = {
-  pushEnabled: true,
-  emailEnabled: true,
-  smsEnabled: false,
-  upcomingEnabled: true,
-  weeklySummary: true,
-  priceChanges: true,
-};
-
-// ─── Row component ────────────────────────────────────────────────────────────
-
-function SettingRow({
-  icon,
-  title,
-  description,
-  value,
-  onValueChange,
-  saving,
-}: {
-  icon: React.ComponentProps<typeof Ionicons>["name"];
-  title: string;
-  description: string;
-  value: boolean;
-  onValueChange: (v: boolean) => void;
-  saving?: boolean;
-}) {
-  return (
-    <View
-      style={{
-        backgroundColor: colors.card,
-        borderRadius: 16,
-        paddingHorizontal: 16,
-        paddingVertical: 14,
-        flexDirection: "row",
-        alignItems: "center",
-        gap: 14,
-        marginBottom: 10,
-      }}
-    >
-      <View
-        style={{
-          width: 42,
-          height: 42,
-          borderRadius: 12,
-          backgroundColor: colors.background,
-          alignItems: "center",
-          justifyContent: "center",
-        }}
-      >
-        <Ionicons name={icon} size={20} color={colors.accent} />
-      </View>
-
-      <View style={{ flex: 1, gap: 2 }}>
-        <Text style={{ fontSize: 15, color: colors.primary, fontFamily: "sans-semibold" }}>
-          {title}
-        </Text>
-        <Text style={{ fontSize: 12, color: colors.mutedForeground, fontFamily: "sans-regular" }}>
-          {description}
-        </Text>
-      </View>
-
-      {saving ? (
-        <ActivityIndicator size="small" color={colors.accent} />
-      ) : (
-        <Switch
-          value={value}
-          onValueChange={onValueChange}
-          trackColor={{ false: colors.border, true: colors.accent }}
-          thumbColor={colors.background}
-        />
-      )}
-    </View>
-  );
-}
-
-// ─── Section header ───────────────────────────────────────────────────────────
-
-function SectionHeader({ title }: { title: string }) {
-  return (
-    <Text
-      style={{
-        fontSize: 12,
-        color: colors.mutedForeground,
-        fontFamily: "sans-semibold",
-        letterSpacing: 1.2,
-        marginBottom: 10,
-        marginTop: 6,
-      }}
-    >
-      {title}
-    </Text>
-  );
-}
+const DAYS_OPTIONS = [
+  { value: 1, label: "1 day before" },
+  { value: 3, label: "3 days before" },
+  { value: 7, label: "7 days before" },
+];
 
 // ─── Screen ───────────────────────────────────────────────────────────────────
 
@@ -131,51 +34,54 @@ export default function NotificationsScreen() {
   const supabase = useSupabase();
   const { userId } = useAuth();
 
-  const [prefs, setPrefs] = useState<LocalPrefs>(DEFAULTS);
+  const [pushEnabled, setPushEnabled] = useState(true);
+  const [daysBefore, setDaysBefore] = useState<number[]>([1, 3, 7]);
   const [saving, setSaving] = useState(false);
+
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Load from Supabase in background — show defaults immediately so screen
-  // is never blocked by a network call.
+  // Load real prefs from Supabase on mount.
   useEffect(() => {
     if (!userId) return;
     getNotificationPrefs(supabase, userId)
       .then((remote) => {
-        setPrefs((prev) => ({ ...prev, pushEnabled: remote.enabled }));
+        setPushEnabled(remote.enabled);
+        setDaysBefore(remote.daysBefore);
       })
-      .catch((err) => {
-        console.error("Failed to load notification prefs:", err);
-      });
+      .catch((err) => console.error("Failed to load notification prefs:", err));
   }, [userId]);
 
-  const update = async (patch: Partial<LocalPrefs>) => {
-    const updated = { ...prefs, ...patch };
-    setPrefs(updated);
-
-    if (patch.pushEnabled !== undefined && patch.pushEnabled) {
-      const granted = await requestPermissions();
-      if (!granted) {
-        setPrefs((p) => ({ ...p, pushEnabled: false }));
-        return;
-      }
-    }
-
-    // Debounce saves so rapid toggles don't spam the DB.
+  // Debounced save — avoids spamming Supabase on rapid toggles.
+  const save = (enabled: boolean, days: number[]) => {
     if (saveTimer.current) clearTimeout(saveTimer.current);
     saveTimer.current = setTimeout(async () => {
       if (!userId) return;
       setSaving(true);
       try {
-        await upsertNotificationPrefs(supabase, userId, {
-          enabled: updated.pushEnabled,
-          daysBefore: [1, 3, 7],
-        });
-      } catch {
-        // Ignore — prefs are still held in local state.
+        await upsertNotificationPrefs(supabase, userId, { enabled, daysBefore: days });
+      } catch (err) {
+        console.error("Failed to save notification prefs:", err);
       } finally {
         setSaving(false);
       }
     }, 800);
+  };
+
+  const handlePushToggle = async (value: boolean) => {
+    if (value) {
+      const granted = await requestPermissions();
+      if (!granted) return;
+    }
+    setPushEnabled(value);
+    save(value, daysBefore);
+  };
+
+  const handleDayToggle = (day: number) => {
+    const updated = daysBefore.includes(day)
+      ? daysBefore.filter((d) => d !== day)
+      : [...daysBefore, day].sort((a, b) => a - b);
+    setDaysBefore(updated);
+    save(pushEnabled, updated);
   };
 
   return (
@@ -198,62 +104,154 @@ export default function NotificationsScreen() {
         <Text style={{ fontSize: 22, color: colors.primary, fontFamily: "sans-bold" }}>
           Notifications
         </Text>
+        {saving && (
+          <ActivityIndicator size="small" color={colors.accent} style={{ marginLeft: "auto" }} />
+        )}
       </View>
 
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 80 }}
       >
-        {/* ── Channels ─────────────────────────────────────────────────────── */}
-        <SectionHeader title="CHANNELS" />
+        {/* ── Push Notifications toggle ─────────────────────────────────────── */}
+        <Text
+          style={{
+            fontSize: 12,
+            color: colors.mutedForeground,
+            fontFamily: "sans-semibold",
+            letterSpacing: 1.2,
+            marginBottom: 10,
+            marginTop: 6,
+          }}
+        >
+          PUSH NOTIFICATIONS
+        </Text>
 
-        <SettingRow
-          icon="notifications-outline"
-          title="Push Notifications"
-          description="Get notified on this device"
-          value={prefs.pushEnabled}
-          onValueChange={(v) => update({ pushEnabled: v })}
-          saving={saving}
-        />
-        <SettingRow
-          icon="mail-outline"
-          title="Email"
-          description="Receive email updates (saved locally)"
-          value={prefs.emailEnabled}
-          onValueChange={(v) => update({ emailEnabled: v })}
-        />
-        <SettingRow
-          icon="chatbubble-outline"
-          title="SMS"
-          description="Text message alerts (saved locally)"
-          value={prefs.smsEnabled}
-          onValueChange={(v) => update({ smsEnabled: v })}
-        />
+        <View
+          style={{
+            backgroundColor: colors.card,
+            borderRadius: 16,
+            paddingHorizontal: 16,
+            paddingVertical: 14,
+            flexDirection: "row",
+            alignItems: "center",
+            gap: 14,
+            marginBottom: 24,
+          }}
+        >
+          <View
+            style={{
+              width: 42,
+              height: 42,
+              borderRadius: 12,
+              backgroundColor: colors.background,
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+          >
+            <Ionicons name="notifications-outline" size={20} color={colors.accent} />
+          </View>
 
-        {/* ── What to notify ───────────────────────────────────────────────── */}
-        <SectionHeader title="WHAT TO NOTIFY" />
+          <View style={{ flex: 1, gap: 2 }}>
+            <Text style={{ fontSize: 15, color: colors.primary, fontFamily: "sans-semibold" }}>
+              Push Notifications
+            </Text>
+            <Text style={{ fontSize: 12, color: colors.mutedForeground, fontFamily: "sans-regular" }}>
+              Get reminded before payments are due
+            </Text>
+          </View>
 
-        <SettingRow
-          icon="calendar-outline"
-          title="Upcoming Payments"
-          description="3 days before due date"
-          value={prefs.upcomingEnabled}
-          onValueChange={(v) => update({ upcomingEnabled: v })}
-        />
-        <SettingRow
-          icon="bar-chart-outline"
-          title="Weekly Summary"
-          description="Every Monday morning"
-          value={prefs.weeklySummary}
-          onValueChange={(v) => update({ weeklySummary: v })}
-        />
-        <SettingRow
-          icon="pricetag-outline"
-          title="Price Changes"
-          description="When subscription costs change"
-          value={prefs.priceChanges}
-          onValueChange={(v) => update({ priceChanges: v })}
-        />
+          <Switch
+            value={pushEnabled}
+            onValueChange={handlePushToggle}
+            trackColor={{ false: colors.border, true: colors.accent }}
+            thumbColor={colors.background}
+          />
+        </View>
+
+        {/* ── Remind me section ─────────────────────────────────────────────── */}
+        <Text
+          style={{
+            fontSize: 12,
+            color: colors.mutedForeground,
+            fontFamily: "sans-semibold",
+            letterSpacing: 1.2,
+            marginBottom: 10,
+          }}
+        >
+          REMIND ME
+        </Text>
+
+        <View
+          style={{
+            backgroundColor: colors.card,
+            borderRadius: 16,
+            paddingHorizontal: 16,
+            paddingVertical: 6,
+            opacity: pushEnabled ? 1 : 0.4,
+          }}
+          pointerEvents={pushEnabled ? "auto" : "none"}
+        >
+          {DAYS_OPTIONS.map((opt, idx) => {
+            const active = daysBefore.includes(opt.value);
+            const isLast = idx === DAYS_OPTIONS.length - 1;
+
+            return (
+              <TouchableOpacity
+                key={opt.value}
+                onPress={() => handleDayToggle(opt.value)}
+                style={{
+                  flexDirection: "row",
+                  alignItems: "center",
+                  paddingVertical: 14,
+                  borderBottomWidth: isLast ? 0 : 1,
+                  borderBottomColor: colors.border,
+                  gap: 14,
+                }}
+                activeOpacity={0.7}
+              >
+                <View
+                  style={{
+                    width: 22,
+                    height: 22,
+                    borderRadius: 6,
+                    borderWidth: 2,
+                    borderColor: active ? colors.accent : colors.border,
+                    backgroundColor: active ? colors.accent : "transparent",
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                >
+                  {active && (
+                    <Ionicons name="checkmark" size={13} color={colors.background} />
+                  )}
+                </View>
+
+                <Text
+                  style={{
+                    fontSize: 15,
+                    color: active ? colors.primary : colors.mutedForeground,
+                    fontFamily: active ? "sans-semibold" : "sans-regular",
+                  }}
+                >
+                  {opt.label}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+
+        <Text
+          style={{
+            fontSize: 12,
+            color: colors.mutedForeground,
+            fontFamily: "sans-regular",
+            marginTop: 10,
+            paddingHorizontal: 4,
+          }}
+        >
+          Select how many days before a payment is due you want to be reminded.
+        </Text>
       </ScrollView>
     </SafeAreaView>
   );

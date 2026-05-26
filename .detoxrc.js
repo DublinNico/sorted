@@ -36,7 +36,7 @@ module.exports = {
       type: 'android.apk',
       binaryPath: 'android/app/build/outputs/apk/debug/app-debug.apk',
       build:
-        'cd android && gradlew.bat assembleDebug assembleAndroidTest -DtestBuildType=debug',
+        'cd android && ./gradlew assembleDebug assembleAndroidTest -DtestBuildType=debug || gradlew.bat assembleDebug assembleAndroidTest -DtestBuildType=debug',
       // Forward Metro port from emulator to host.
       reversePorts: [8082],
     },
@@ -48,7 +48,7 @@ module.exports = {
       type: 'android.emulator',
       device: {
         // AVD name from Android Studio (run `emulator -list-avds` to verify).
-        avdName: 'Medium_Phone_API_35',
+        avdName: process.env.E2E_AVD_NAME || 'Medium_Phone_API_35',
       },
     },
   },

@@ -33,6 +33,10 @@ import { by, device, element, expect, waitFor } from 'detox';
 const EMAIL    = process.env.E2E_EMAIL    ?? '';
 const PASSWORD = process.env.E2E_PASSWORD ?? '';
 
+if (!EMAIL || !PASSWORD) {
+  throw new Error('E2E_EMAIL and E2E_PASSWORD must be set to run E2E tests.');
+}
+
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
 async function signIn() {
@@ -95,9 +99,9 @@ describe('Biometric Login Flow', () => {
 
     await element(by.id('sign-in-biometric-button')).tap();
 
-    // Simulate fingerprint match on the emulator.
-    // Requires a fingerprint enrolled via Android Studio Extended Controls.
-    await device.sendUserNotification({ title: 'biometric', body: '' });
+    // Simulate fingerprint match on the emulator via Detox biometric API.
+    // Requires a fingerprint enrolled in Android Studio Extended Controls.
+    await device.matchFinger();
 
     // After successful biometric auth the home screen should appear.
     await waitFor(element(by.text('Home'))).toBeVisible().withTimeout(15000);

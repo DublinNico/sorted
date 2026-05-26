@@ -26,6 +26,10 @@ import { by, device, element, expect, waitFor } from 'detox';
 const EMAIL    = process.env.E2E_EMAIL    ?? '';
 const PASSWORD = process.env.E2E_PASSWORD ?? '';
 
+if (!EMAIL || !PASSWORD) {
+  throw new Error('E2E_EMAIL and E2E_PASSWORD must be set to run E2E tests.');
+}
+
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
 /**

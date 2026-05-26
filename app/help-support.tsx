@@ -21,6 +21,7 @@ interface ContactOption {
   subtitle: string;
   action: () => void;
   trailingIcon: React.ComponentProps<typeof Ionicons>["name"];
+  disabled?: boolean;
 }
 
 interface FaqItem {
@@ -81,8 +82,8 @@ function SectionHeader({ title }: { title: string }) {
 function ContactRow({ option }: { option: ContactOption }) {
   return (
     <TouchableOpacity
-      onPress={option.action}
-      activeOpacity={0.75}
+      onPress={option.disabled ? undefined : option.action}
+      activeOpacity={option.disabled ? 1 : 0.75}
       style={{
         backgroundColor: colors.card,
         borderRadius: 16,
@@ -92,6 +93,7 @@ function ContactRow({ option }: { option: ContactOption }) {
         alignItems: "center",
         gap: 14,
         marginBottom: 10,
+        opacity: option.disabled ? 0.45 : 1,
       }}
     >
       <View
@@ -154,9 +156,10 @@ export default function HelpSupportScreen() {
     {
       icon: "chatbubble-ellipses-outline",
       title: "Live Chat",
-      subtitle: "Get instant help from our team",
+      subtitle: "Coming soon",
       action: () => {},
       trailingIcon: "chevron-forward",
+      disabled: true,
     },
     {
       icon: "mail-outline",
@@ -168,9 +171,10 @@ export default function HelpSupportScreen() {
     {
       icon: "document-text-outline",
       title: "Documentation",
-      subtitle: "User guides and tutorials",
+      subtitle: "Coming soon",
       action: () => {},
       trailingIcon: "chevron-forward",
+      disabled: true,
     },
   ];
 

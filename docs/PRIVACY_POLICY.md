@@ -1,7 +1,7 @@
 # Privacy Policy
 
 **App name:** Sorted  
-**Last updated:** 26 May 2025  
+**Last updated:** 26 May 2026  
 **Contact:** support@sorted.ie
 
 ---

@@ -124,7 +124,8 @@ export const DOMAIN_OVERRIDES: Record<string, string> = {
 };
 
 export function getDomain(name: string): string {
-  const lower     = name.trim().toLowerCase();
+  const lower = name.trim().toLowerCase();
+  if (!lower) return "";
   const firstWord = lower.split(/\s+/)[0];
   return DOMAIN_OVERRIDES[lower] ?? DOMAIN_OVERRIDES[firstWord] ?? `${firstWord}.com`;
 }

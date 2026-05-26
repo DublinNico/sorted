@@ -3,6 +3,7 @@ import {
   authenticateWithBiometrics,
   isBiometricsEnabled,
   isBiometricsSupported,
+  saveCredentials,
   setBiometricsEnabled,
 } from "@/utils/biometrics";
 import { useUser } from "@clerk/expo";
@@ -12,6 +13,7 @@ import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
+  Linking,
   Pressable,
   ScrollView,
   Switch,
@@ -176,7 +178,6 @@ export default function SecurityScreen() {
   const [saving, setSaving]                     = useState(false);
   const [biometric, setBiometric]               = useState(false);
   const [bioSupported, setBioSupported]         = useState(false);
-  const [twoFactor, setTwoFactor]               = useState(false);
 
   // ── Load biometric state ────────────────────────────────────────────────────
   useEffect(() => {
@@ -197,8 +198,17 @@ export default function SecurityScreen() {
         Alert.alert("Not Available", "Biometric authentication is not set up on this device.");
         return;
       }
+      const email = user?.primaryEmailAddress?.emailAddress;
+      if (!email || !currentPassword) {
+        Alert.alert(
+          "Password Required",
+          "Enter your current password in the field above, then enable biometric login."
+        );
+        return;
+      }
       const authed = await authenticateWithBiometrics("Confirm to enable biometric login");
       if (!authed) return;
+      await saveCredentials(email, currentPassword);
       await setBiometricsEnabled(true);
       setBiometric(true);
     } else {
@@ -307,9 +317,11 @@ export default function SecurityScreen() {
         <SecurityRow
           icon="shield-outline"
           title="Two-Factor Authentication"
-          description="Add an extra layer of security"
-          value={twoFactor}
-          onValueChange={setTwoFactor}
+          description="Coming soon"
+          value={false}
+          onValueChange={() =>
+            Alert.alert("Coming Soon", "Two-factor authentication will be available in a future update.")
+          }
         />
 
         {/* ── Data Privacy card ───────────────────────────────────────────── */}
@@ -328,7 +340,10 @@ export default function SecurityScreen() {
           <Text style={{ fontSize: 13, color: colors.mutedForeground, fontFamily: "sans-regular", lineHeight: 20 }}>
             Your data is encrypted and stored securely. We never share your information with third parties.
           </Text>
-          <TouchableOpacity hitSlop={8}>
+          <TouchableOpacity
+            hitSlop={8}
+            onPress={() => Linking.openURL("https://dublinnico.github.io/privacy.html")}
+          >
             <Text style={{ fontSize: 13, color: colors.accent, fontFamily: "sans-semibold" }}>
               View Privacy Policy →
             </Text>

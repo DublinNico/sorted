@@ -15,6 +15,7 @@ import { colors } from "@/constants/theme";
 import { useSubscriptionsStore } from "@/store/subscriptionsStore";
 import { useSupabase } from "@/hooks/useSupabase";
 import { createSubscription as createSubscriptionService } from "@/services/subscriptions";
+import { upsertMonthlySnapshot } from "@/services/monthlySnapshots";
 import { useAuth } from "@clerk/expo";
 import { Ionicons } from "@expo/vector-icons";
 import type { BottomTabBarProps } from "@react-navigation/bottom-tabs";
@@ -180,9 +181,12 @@ const TabLayout = () => {
     if (userId) {
       try {
         const saved = await createSubscriptionService(supabase, subscription, userId);
-        // Replace the optimistic temp-id entry with the server-assigned UUID.
         deleteSubscription(subscription.id);
         addSubscription(saved);
+        const { subscriptions } = useSubscriptionsStore.getState();
+        const total = subscriptions.reduce((sum, s) => sum + s.price, 0);
+        const now = new Date();
+        upsertMonthlySnapshot(supabase, userId, now.getFullYear(), now.getMonth() + 1, total).catch(console.error);
       } catch (err) {
         console.error("Failed to sync subscription:", err);
       }

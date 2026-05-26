@@ -49,18 +49,7 @@ const CATEGORY_COLORS: Record<string, string> = {
   Other:             "#7F8C8D",
 };
 
-/**
- * TREND_DATA
- * Static monthly spending values used for the bar chart.
- * The app does not yet persist historical totals, so these mock the
- * previous four months while the current month is derived from the store.
- */
-const TREND_DATA_STATIC = [
-  { month: "Jan", amount: 1200 },
-  { month: "Feb", amount: 1350 },
-  { month: "Mar", amount: 1180 },
-  { month: "Apr", amount: 1450 },
-];
+const MONTH_NAMES = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
 // Height (px) of the bar drawing area.
 const BAR_CHART_HEIGHT = 160;
@@ -388,33 +377,30 @@ const CategoryBreakdown = ({ data }: { data: CategoryEntry[] }) => {
  * so the rightmost bar always reflects real spending.
  */
 const InsightsScreen = () => {
-  const { subscriptions } = useSubscriptionsStore();
+  const { subscriptions, monthlySnapshots } = useSubscriptionsStore();
 
   // ── Derived values ──────────────────────────────────────────────────────────
 
   /** Total of all subscription prices. */
   const totalMonthly = subscriptions.reduce((sum, s) => sum + s.price, 0);
 
-  /** Percentage change vs the most recent static month (prev month proxy). */
-  const prevMonthAmount = TREND_DATA_STATIC[TREND_DATA_STATIC.length - 1].amount;
-  const trendPercent = prevMonthAmount > 0
-    ? ((totalMonthly - prevMonthAmount) / prevMonthAmount) * 100
-    : 0;
-  const trendLabel = `${trendPercent >= 0 ? "+" : ""}${trendPercent.toFixed(0)}% vs last month`;
+  /** Bar chart data derived from real snapshots. */
+  const trendData = useMemo(() =>
+    monthlySnapshots.map((s) => ({
+      month: MONTH_NAMES[s.month - 1],
+      amount: s.totalAmount,
+    })),
+  [monthlySnapshots]);
 
-  /**
-   * trendData
-   * Static prior-month figures + the live current-month total as the last bar.
-   * Re-computed when the store changes so the current bar stays in sync.
-   */
-  const trendData = useMemo(() => {
-    const now = new Date();
-    const currentMonthLabel = now.toLocaleString("default", { month: "short" });
-    return [
-      ...TREND_DATA_STATIC,
-      { month: currentMonthLabel, amount: totalMonthly },
-    ];
-  }, [totalMonthly]);
+  /** Percentage change vs the previous month's real snapshot. */
+  const trendLabel = useMemo(() => {
+    if (monthlySnapshots.length < 2) return null;
+    const prev = monthlySnapshots[monthlySnapshots.length - 2].totalAmount;
+    const curr = monthlySnapshots[monthlySnapshots.length - 1].totalAmount;
+    if (prev === 0) return null;
+    const pct = ((curr - prev) / prev) * 100;
+    return `${pct >= 0 ? "+" : ""}${pct.toFixed(0)}% vs last month`;
+  }, [monthlySnapshots]);
 
   /**
    * categoryData
@@ -503,34 +489,26 @@ const InsightsScreen = () => {
             {formatCurrency(totalMonthly)}
           </Text>
 
-          {/* Trend badge */}
-          <View
-            style={{
-              flexDirection: "row",
-              alignItems: "center",
-              alignSelf: "flex-start",
-              backgroundColor: colors.background + "33",  // 20 % opacity dark green
-              borderRadius: 999,
-              paddingHorizontal: 12,
-              paddingVertical: 6,
-              gap: 6,
-            }}
-          >
-            <Ionicons
-              name="trending-up-outline"
-              size={14}
-              color={colors.background}
-            />
-            <Text
+          {/* Trend badge — only shown when 2+ months of real data exist */}
+          {trendLabel && (
+            <View
               style={{
-                fontSize: 12,
-                color: colors.background,
-                fontFamily: "sans-medium",
+                flexDirection: "row",
+                alignItems: "center",
+                alignSelf: "flex-start",
+                backgroundColor: colors.background + "33",
+                borderRadius: 999,
+                paddingHorizontal: 12,
+                paddingVertical: 6,
+                gap: 6,
               }}
             >
-              {trendLabel}
-            </Text>
-          </View>
+              <Ionicons name="trending-up-outline" size={14} color={colors.background} />
+              <Text style={{ fontSize: 12, color: colors.background, fontFamily: "sans-medium" }}>
+                {trendLabel}
+              </Text>
+            </View>
+          )}
         </View>
 
         {/* ── Spending Trend card ─────────────────────────────────────────── */}
@@ -553,8 +531,13 @@ const InsightsScreen = () => {
             Spending Trend
           </Text>
 
-          {/* Custom bar chart — last 5 months, current month always at the right */}
-          <SpendingTrendChart data={trendData} />
+          {trendData.length === 0 ? (
+            <Text style={{ fontSize: 14, color: colors.mutedForeground, fontFamily: "sans-regular", paddingVertical: 8 }}>
+              Your spending history will appear here once data has been recorded.
+            </Text>
+          ) : (
+            <SpendingTrendChart data={trendData} />
+          )}
         </View>
 
         {/* ── Category Breakdown card ─────────────────────────────────────── */}

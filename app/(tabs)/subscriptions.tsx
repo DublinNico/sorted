@@ -25,6 +25,7 @@ import {
   deleteSubscription as deleteSubscriptionService,
   updateSubscription as updateSubscriptionService,
 } from "@/services/subscriptions";
+import { upsertMonthlySnapshot } from "@/services/monthlySnapshots";
 import { useAuth } from "@clerk/expo";
 import { Ionicons } from "@expo/vector-icons";
 import React, { useMemo, useState } from "react";
@@ -271,6 +272,10 @@ const Subscriptions = () => {
                     addSubscription(captured);
                     setExpandedId(prevExpanded);
                   });
+                  const { subscriptions: updated } = useSubscriptionsStore.getState();
+                  const total = updated.reduce((sum, s) => sum + s.price, 0);
+                  const now = new Date();
+                  upsertMonthlySnapshot(supabase, userId, now.getFullYear(), now.getMonth() + 1, total).catch(console.error);
                 }
               }}
             />
@@ -310,6 +315,10 @@ const Subscriptions = () => {
           setEditingSubscription(null);
           if (userId) {
             updateSubscriptionService(supabase, updated, userId).catch(console.error);
+            const { subscriptions: current } = useSubscriptionsStore.getState();
+            const total = current.reduce((sum, s) => sum + s.price, 0);
+            const now = new Date();
+            upsertMonthlySnapshot(supabase, userId, now.getFullYear(), now.getMonth() + 1, total).catch(console.error);
           }
         }}
       />
