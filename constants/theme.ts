@@ -58,6 +58,20 @@ export const components = {
   },
 } as const;
 
+// --- Overlay color ---
+// Semi-transparent black used for modal/sheet backdrops.
+export const overlay = "rgba(0,0,0,0.5)";
+
+// --- Opacity helper ---
+// Appends an 8-digit hex alpha to a 6-digit hex colour token.
+// Only valid for colours already in #RRGGBB form (all `colors.*` values qualify).
+export function withOpacity(hex: string, opacity: number): string {
+  const alpha = Math.round(Math.max(0, Math.min(1, opacity)) * 255)
+    .toString(16)
+    .padStart(2, "0");
+  return `${hex}${alpha}`;
+}
+
 // --- Unified theme export ---
 // Convenience object that bundles all tokens; import `theme` when you need everything at once.
 export const theme = {

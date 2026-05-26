@@ -15,6 +15,7 @@ import { colors } from "@/constants/theme";
 import { useSubscriptionsStore } from "@/store/subscriptionsStore";
 import { useSupabase } from "@/hooks/useSupabase";
 import { createSubscription as createSubscriptionService } from "@/services/subscriptions";
+import { upsertMonthlySnapshot } from "@/services/monthlySnapshots";
 import { useAuth } from "@clerk/expo";
 import { Ionicons } from "@expo/vector-icons";
 import type { BottomTabBarProps } from "@react-navigation/bottom-tabs";
@@ -93,6 +94,7 @@ const CustomTabBar = ({ state, navigation, onAddPress }: CustomTabBarProps) => {
                * shadow / elevation gives the gold glow effect.
                */}
               <Pressable
+                testID="add-subscription-fab"
                 onPress={onAddPress}
                 style={{
                   width: 56,
@@ -165,7 +167,7 @@ const TabLayout = () => {
   // Controls visibility of the Add Subscription bottom sheet.
   const [modalVisible, setModalVisible] = useState(false);
 
-  const { addSubscription } = useSubscriptionsStore();
+  const { addSubscription, deleteSubscription } = useSubscriptionsStore();
   const supabase = useSupabase();
   const { userId } = useAuth();
 
@@ -179,7 +181,12 @@ const TabLayout = () => {
     if (userId) {
       try {
         const saved = await createSubscriptionService(supabase, subscription, userId);
-        useSubscriptionsStore.getState().updateSubscription(saved);
+        deleteSubscription(subscription.id);
+        addSubscription(saved);
+        const { subscriptions } = useSubscriptionsStore.getState();
+        const total = subscriptions.reduce((sum, s) => sum + s.price, 0);
+        const now = new Date();
+        upsertMonthlySnapshot(supabase, userId, now.getFullYear(), now.getMonth() + 1, total).catch(console.error);
       } catch (err) {
         console.error("Failed to sync subscription:", err);
       }
@@ -190,7 +197,10 @@ const TabLayout = () => {
     <>
       {/* ── Navigator ──────────────────────────────────────────────────────── */}
       <Tabs
-        screenOptions={{ headerShown: false }}
+        screenOptions={{
+          headerShown: false,
+          sceneContainerStyle: { backgroundColor: colors.background },
+        }}
         tabBar={(props) => (
           <CustomTabBar {...props} onAddPress={() => setModalVisible(true)} />
         )}

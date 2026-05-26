@@ -48,12 +48,12 @@ const AppSplashScreen = () => {
         <SortedLogo size={96} glow />
       </View>
 
-      {/* App name */}
+      {/* App name — no custom fontFamily here; fonts may not be loaded yet */}
       <Text
         style={{
           fontSize: 40,
+          fontWeight: "800",
           color: colors.primary,
-          fontFamily: "sans-extrabold",
           letterSpacing: 0.5,
           marginBottom: 10,
         }}
@@ -75,8 +75,8 @@ const AppSplashScreen = () => {
         <Text
           style={{
             fontSize: 12,
+            fontWeight: "600",
             color: colors.accent,
-            fontFamily: "sans-semibold",
             letterSpacing: 2,
           }}
         >
@@ -89,8 +89,8 @@ const AppSplashScreen = () => {
       <Text
         style={{
           fontSize: 18,
+          fontWeight: "600",
           color: colors.primary,
-          fontFamily: "sans-semibold",
           marginBottom: 8,
         }}
       >
@@ -101,8 +101,8 @@ const AppSplashScreen = () => {
       <Text
         style={{
           fontSize: 13,
+          fontWeight: "400",
           color: colors.mutedForeground,
-          fontFamily: "sans-regular",
           textAlign: "center",
           paddingHorizontal: 48,
           lineHeight: 20,

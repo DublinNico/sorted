@@ -25,6 +25,7 @@ import {
   deleteSubscription as deleteSubscriptionService,
   updateSubscription as updateSubscriptionService,
 } from "@/services/subscriptions";
+import { upsertMonthlySnapshot } from "@/services/monthlySnapshots";
 import { useAuth } from "@clerk/expo";
 import { Ionicons } from "@expo/vector-icons";
 import React, { useMemo, useState } from "react";
@@ -47,7 +48,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
  * Renders the Bills tab — a searchable, filterable list of all subscriptions.
  */
 const Subscriptions = () => {
-  const { subscriptions, deleteSubscription, updateSubscription } = useSubscriptionsStore();
+  const { subscriptions, addSubscription, deleteSubscription, updateSubscription } = useSubscriptionsStore();
   const supabase = useSupabase();
   const { userId } = useAuth();
 
@@ -261,10 +262,20 @@ const Subscriptions = () => {
                 setExpandedId(null);
               }}
               onCancelPress={() => {
+                const captured = item;
+                const prevExpanded = expandedId;
                 deleteSubscription(item.id);
                 setExpandedId(null);
                 if (userId) {
-                  deleteSubscriptionService(supabase, item.id, userId).catch(console.error);
+                  deleteSubscriptionService(supabase, item.id, userId).catch((err) => {
+                    console.error("Delete failed, rolling back:", err);
+                    addSubscription(captured);
+                    setExpandedId(prevExpanded);
+                  });
+                  const { subscriptions: updated } = useSubscriptionsStore.getState();
+                  const total = updated.reduce((sum, s) => sum + s.price, 0);
+                  const now = new Date();
+                  upsertMonthlySnapshot(supabase, userId, now.getFullYear(), now.getMonth() + 1, total).catch(console.error);
                 }
               }}
             />
@@ -304,6 +315,10 @@ const Subscriptions = () => {
           setEditingSubscription(null);
           if (userId) {
             updateSubscriptionService(supabase, updated, userId).catch(console.error);
+            const { subscriptions: current } = useSubscriptionsStore.getState();
+            const total = current.reduce((sum, s) => sum + s.price, 0);
+            const now = new Date();
+            upsertMonthlySnapshot(supabase, userId, now.getFullYear(), now.getMonth() + 1, total).catch(console.error);
           }
         }}
       />

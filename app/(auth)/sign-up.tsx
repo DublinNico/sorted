@@ -72,7 +72,11 @@ export default function SignUp() {
   };
 
   const finalize = async () => {
-    await signUp.finalize({ navigate: () => {} });
+    try {
+      await signUp.finalize({ navigate: () => {} });
+    } catch (err: unknown) {
+      setErrorMessage(err instanceof Error ? err.message : "Sign up finalization failed.");
+    }
   };
 
   const handleSignUp = async () => {
@@ -168,7 +172,7 @@ export default function SignUp() {
             </View>
 
             <Text style={{ fontSize: 13, fontFamily: "sans-medium", color: colors.mutedForeground, textAlign: "center", marginBottom: 20 }}>
-              Didn't receive it? Check your spam folder.
+              {"Didn’t receive it? Check your spam folder."}
             </Text>
 
             <Pressable
