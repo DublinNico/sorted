@@ -20,7 +20,7 @@ interface SubscriptionRow {
 
 // ─── Converters ───────────────────────────────────────────────────────────────
 
-function rowToSubscription(row: SubscriptionRow): Subscription {
+export function rowToSubscription(row: SubscriptionRow): Subscription {
   return {
     id: row.id,
     name: row.name,
@@ -37,7 +37,7 @@ function rowToSubscription(row: SubscriptionRow): Subscription {
   };
 }
 
-function subscriptionToRow(
+export function subscriptionToRow(
   sub: Omit<Subscription, "id">,
   userId: string,
   id?: string

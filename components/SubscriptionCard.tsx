@@ -63,7 +63,10 @@ const SubscriptionCard = ({
   status,
   onPress,
   onCancelPress,
+  onEditPress,
 }: SubscriptionCardProps) => {
+  // Stable testID slug derived from the subscription name.
+  const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-');
 
   // Track whether the remote logo URI failed so we can swap in the fallback.
   const [imgError, setImgError] = useState(false);
@@ -91,6 +94,7 @@ const SubscriptionCard = ({
 
   return (
     <Pressable
+      testID={`subscription-card-${slug}`}
       onPress={onPress}
       style={{
         backgroundColor: colors.card,           // #0F4D39 always
@@ -249,12 +253,38 @@ const SubscriptionCard = ({
             ) : null
           )}
 
-          {/* Delete button — destructive red */}
+          {/* Edit button — outlined gold */}
           <TouchableOpacity
-            onPress={onCancelPress}
+            onPress={onEditPress}
             activeOpacity={0.8}
             style={{
               marginTop: 6,
+              backgroundColor: "transparent",
+              borderRadius: 24,
+              paddingVertical: 14,
+              alignItems: "center",
+              borderWidth: 1.5,
+              borderColor: colors.accent,
+            }}
+          >
+            <Text
+              style={{
+                fontSize: 16,
+                color: colors.accent,
+                fontFamily: "sans-bold",
+              }}
+            >
+              Edit Payment
+            </Text>
+          </TouchableOpacity>
+
+          {/* Delete button — destructive red */}
+          <TouchableOpacity
+            testID={`subscription-delete-${slug}`}
+            onPress={onCancelPress}
+            activeOpacity={0.8}
+            style={{
+              marginTop: 8,
               backgroundColor: colors.destructive,
               borderRadius: 24,
               paddingVertical: 14,

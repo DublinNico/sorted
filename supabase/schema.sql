@@ -18,7 +18,7 @@ create table if not exists public.subscriptions (
   id           uuid primary key default gen_random_uuid(),
   user_id      text not null,
   name         text not null,
-  price        numeric(10, 2) not null default 0,
+  price        numeric(10, 2) not null default 0 check (price >= 0),
   currency     text not null default 'EUR',
   billing      text not null default 'Monthly',
   frequency    text not null default 'Monthly',
@@ -33,6 +33,11 @@ create table if not exists public.subscriptions (
 );
 
 alter table public.subscriptions enable row level security;
+
+drop policy if exists "users can read own subscriptions"   on public.subscriptions;
+drop policy if exists "users can insert own subscriptions" on public.subscriptions;
+drop policy if exists "users can update own subscriptions" on public.subscriptions;
+drop policy if exists "users can delete own subscriptions" on public.subscriptions;
 
 create policy "users can read own subscriptions"
   on public.subscriptions for select
@@ -65,6 +70,8 @@ create table if not exists public.push_tokens (
 
 alter table public.push_tokens enable row level security;
 
+drop policy if exists "users can manage own push tokens" on public.push_tokens;
+
 create policy "users can manage own push tokens"
   on public.push_tokens for all
   using ((auth.jwt() ->> 'sub') = user_id);
@@ -83,6 +90,8 @@ create table if not exists public.notification_preferences (
 
 alter table public.notification_preferences enable row level security;
 
+drop policy if exists "users can manage own notification prefs" on public.notification_preferences;
+
 create policy "users can manage own notification prefs"
   on public.notification_preferences for all
   using ((auth.jwt() ->> 'sub') = user_id);
@@ -97,6 +106,10 @@ begin
   return new;
 end;
 $$;
+
+drop trigger if exists subscriptions_updated_at          on public.subscriptions;
+drop trigger if exists push_tokens_updated_at             on public.push_tokens;
+drop trigger if exists notification_preferences_updated_at on public.notification_preferences;
 
 create trigger subscriptions_updated_at
   before update on public.subscriptions

@@ -1,4 +1,5 @@
-import { colors } from "@/constants/theme";
+import { colors, overlay } from "@/constants/theme";
+import { CardType, detectCardType, formatExpiry } from "@/utils/cardUtils";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useState } from "react";
@@ -18,25 +19,10 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 interface PaymentCard {
   id: string;
-  type: "Visa" | "Mastercard" | "Amex" | "Other";
+  type: CardType;
   last4: string;
   expiry: string;
   isDefault: boolean;
-}
-
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-
-function detectCardType(number: string): PaymentCard["type"] {
-  if (number.startsWith("4")) return "Visa";
-  if (number.startsWith("5") || number.startsWith("2")) return "Mastercard";
-  if (number.startsWith("3")) return "Amex";
-  return "Other";
-}
-
-function formatExpiry(raw: string): string {
-  const digits = raw.replace(/\D/g, "").slice(0, 4);
-  if (digits.length <= 2) return digits;
-  return `${digits.slice(0, 2)}/${digits.slice(2)}`;
 }
 
 // ─── Add Card Modal ───────────────────────────────────────────────────────────
@@ -71,7 +57,7 @@ function AddCardModal({
 
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={handleClose}>
-      <Pressable style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.5)" }} onPress={handleClose}>
+      <Pressable style={{ flex: 1, backgroundColor: overlay }} onPress={handleClose}>
         <View style={{ flex: 1 }} />
         <Pressable
           onPress={(e) => e.stopPropagation()}
@@ -272,7 +258,7 @@ export default function PaymentMethodsScreen() {
   const handleAdd = (card: Omit<PaymentCard, "id" | "isDefault">) => {
     setCards((prev) => [
       ...prev,
-      { ...card, id: Date.now().toString(), isDefault: prev.length === 0 },
+      { ...card, id: `${Date.now()}-${Math.random().toString(36).slice(2)}`, isDefault: prev.length === 0 },
     ]);
   };
 
@@ -290,7 +276,7 @@ export default function PaymentMethodsScreen() {
           setCards((prev) => {
             const remaining = prev.filter((c) => c.id !== id);
             if (remaining.length > 0 && !remaining.some((c) => c.isDefault)) {
-              remaining[0].isDefault = true;
+              return remaining.map((c, i) => i === 0 ? { ...c, isDefault: true } : c);
             }
             return remaining;
           }),

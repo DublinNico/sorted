@@ -93,6 +93,7 @@ const CustomTabBar = ({ state, navigation, onAddPress }: CustomTabBarProps) => {
                * shadow / elevation gives the gold glow effect.
                */}
               <Pressable
+                testID="add-subscription-fab"
                 onPress={onAddPress}
                 style={{
                   width: 56,
@@ -165,7 +166,7 @@ const TabLayout = () => {
   // Controls visibility of the Add Subscription bottom sheet.
   const [modalVisible, setModalVisible] = useState(false);
 
-  const { addSubscription } = useSubscriptionsStore();
+  const { addSubscription, deleteSubscription } = useSubscriptionsStore();
   const supabase = useSupabase();
   const { userId } = useAuth();
 
@@ -179,7 +180,9 @@ const TabLayout = () => {
     if (userId) {
       try {
         const saved = await createSubscriptionService(supabase, subscription, userId);
-        useSubscriptionsStore.getState().updateSubscription(saved);
+        // Replace the optimistic temp-id entry with the server-assigned UUID.
+        deleteSubscription(subscription.id);
+        addSubscription(saved);
       } catch (err) {
         console.error("Failed to sync subscription:", err);
       }
@@ -190,7 +193,10 @@ const TabLayout = () => {
     <>
       {/* ── Navigator ──────────────────────────────────────────────────────── */}
       <Tabs
-        screenOptions={{ headerShown: false }}
+        screenOptions={{
+          headerShown: false,
+          sceneContainerStyle: { backgroundColor: colors.background },
+        }}
         tabBar={(props) => (
           <CustomTabBar {...props} onAddPress={() => setModalVisible(true)} />
         )}

@@ -30,6 +30,7 @@ const CATEGORY_COLORS: Record<string, string> = {
   Music:              "#FF6B9D",
   Design:             "#FF9500",
   "Developer Tools":  "#00D4AA",
+  Fitness:            "#FF6B35",
   Other:              "#6B7280",
 };
 
@@ -223,12 +224,6 @@ export default function HomeScreen() {
   const now = Date.now();
   const activeCount = subscriptions.filter((s) => s.status !== "cancelled").length;
 
-  const upcomingThisWeek = subscriptions.filter((s) => {
-    if (!s.renewalDate) return false;
-    const diff = (new Date(s.renewalDate).getTime() - now) / 86_400_000;
-    return diff >= 0 && diff <= 7;
-  }).length;
-
   // Due soon: next 5 future renewals sorted by date
   const dueSoon = [...subscriptions]
     .filter((s) => s.renewalDate && new Date(s.renewalDate).getTime() > now)
@@ -294,21 +289,13 @@ export default function HomeScreen() {
           </Pressable>
         </View>
 
-        {/* ── Stats grid row 1 ────────────────────────────────────────────── */}
-        <View style={{ flexDirection: "row", gap: 12, marginBottom: 12 }}>
+        {/* ── Stats grid row 1 — full-width gold card ────────────────────── */}
+        <View style={{ marginBottom: 12 }}>
           <StatCard
             label="Monthly"
             value={formatCurrency(totalMonthly)}
             icon="card-outline"
             gold
-            flex={1.15}
-          />
-          <StatCard
-            label="Upcoming"
-            value={String(upcomingThisWeek)}
-            sub="This week"
-            icon="information-circle-outline"
-            flex={1}
           />
         </View>
 
@@ -319,7 +306,6 @@ export default function HomeScreen() {
             value={String(activeCount)}
             sub="Payments"
             icon="cash-outline"
-            flex={1}
           />
           <StatCard
             label="Change"
@@ -327,9 +313,44 @@ export default function HomeScreen() {
             sub="vs last month"
             icon="trending-up-outline"
             valueColor={colors.accent}
-            flex={1.15}
           />
         </View>
+
+        {/* ── Due Soon ────────────────────────────────────────────────────── */}
+        <View
+          style={{
+            flexDirection: "row",
+            justifyContent: "space-between",
+            alignItems: "center",
+            marginBottom: 12,
+          }}
+        >
+          <Text style={{ fontSize: 17, color: colors.primary, fontFamily: "sans-bold" }}>
+            Due Soon
+          </Text>
+          <Pressable onPress={() => router.navigate("/(tabs)/subscriptions")}>
+            <Text style={{ fontSize: 13, color: colors.accent, fontFamily: "sans-semibold" }}>
+              See all
+            </Text>
+          </Pressable>
+        </View>
+
+        {dueSoon.length === 0 ? (
+          <Text style={{ fontSize: 14, color: colors.mutedForeground, fontFamily: "sans-regular", paddingVertical: 8, marginBottom: 20 }}>
+            No upcoming payments.
+          </Text>
+        ) : (
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={{ gap: 12, paddingRight: 4 }}
+            style={{ marginBottom: 20 }}
+          >
+            {dueSoon.map((sub) => (
+              <DueSoonCard key={sub.id} sub={sub} />
+            ))}
+          </ScrollView>
+        )}
 
         {/* ── Spending Overview ───────────────────────────────────────────── */}
         <View
@@ -387,41 +408,6 @@ export default function HomeScreen() {
             </View>
           )}
         </View>
-
-        {/* ── Due Soon ────────────────────────────────────────────────────── */}
-        <View
-          style={{
-            flexDirection: "row",
-            justifyContent: "space-between",
-            alignItems: "center",
-            marginBottom: 12,
-          }}
-        >
-          <Text style={{ fontSize: 17, color: colors.primary, fontFamily: "sans-bold" }}>
-            Due Soon
-          </Text>
-          <Pressable onPress={() => router.navigate("/(tabs)/subscriptions")}>
-            <Text style={{ fontSize: 13, color: colors.accent, fontFamily: "sans-semibold" }}>
-              See all
-            </Text>
-          </Pressable>
-        </View>
-
-        {dueSoon.length === 0 ? (
-          <Text style={{ fontSize: 14, color: colors.mutedForeground, fontFamily: "sans-regular", paddingVertical: 8 }}>
-            No upcoming payments.
-          </Text>
-        ) : (
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={{ gap: 12, paddingRight: 4 }}
-          >
-            {dueSoon.map((sub) => (
-              <DueSoonCard key={sub.id} sub={sub} />
-            ))}
-          </ScrollView>
-        )}
 
       </ScrollView>
     </SafeAreaView>

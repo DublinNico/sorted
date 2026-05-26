@@ -162,6 +162,9 @@ const ProfileScreen = () => {
             <TouchableOpacity
               onPress={() => router.back()}
               hitSlop={8}
+              accessibilityRole="button"
+              accessibilityLabel="Go back"
+              accessibilityHint="Navigates to the previous screen"
               style={{
                 width: 36,
                 height: 36,

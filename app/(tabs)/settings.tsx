@@ -17,7 +17,7 @@
  */
 
 import "@/global.css";
-import { colors } from "@/constants/theme";
+import { colors, withOpacity } from "@/constants/theme";
 import { formatCurrency } from "@/lib/utils";
 import { useSubscriptionsStore } from "@/store/subscriptionsStore";
 import { useClerk, useUser } from "@clerk/expo";
@@ -39,7 +39,7 @@ type SettingsItem = {
   label: string;
   description: string;
   /** Typed as a literal union — add entries here as screens are built. */
-  route?: "/profile" | "/notifications" | "/payment-methods";
+  route?: "/profile" | "/notifications" | "/payment-methods" | "/security" | "/help-support";
 };
 
 /**
@@ -52,8 +52,8 @@ const SETTINGS_ITEMS: SettingsItem[] = [
   { icon: "person-outline",            label: "Profile",          description: "Manage your account",  route: "/profile" },
   { icon: "notifications-outline",     label: "Notifications",    description: "Billing reminders",   route: "/notifications" },
   { icon: "card-outline",              label: "Payment Methods",  description: "Manage cards",         route: "/payment-methods" },
-  { icon: "shield-checkmark-outline",  label: "Security",         description: "Password & privacy"   },
-  { icon: "help-circle-outline",       label: "Help & Support",   description: "Get assistance"       },
+  { icon: "shield-checkmark-outline",  label: "Security",         description: "Password & privacy",  route: "/security" },
+  { icon: "help-circle-outline",       label: "Help & Support",   description: "Get assistance",       route: "/help-support" },
 ];
 
 // ─── Helper ───────────────────────────────────────────────────────────────────
@@ -215,6 +215,7 @@ const Settings = () => {
           {SETTINGS_ITEMS.map((item) => (
             <TouchableOpacity
               key={item.label}
+              testID={`settings-row-${item.label.toLowerCase().replace(/\s/g, '-')}`}
               activeOpacity={item.route ? 0.7 : 1}
               onPress={item.route ? () => router.push(item.route!) : undefined}
               style={{
@@ -232,7 +233,7 @@ const Settings = () => {
                   width: 46,
                   height: 46,
                   borderRadius: 12,
-                  backgroundColor: colors.accent + "20",  // 12% opacity gold
+                  backgroundColor: withOpacity(colors.accent, 0.125),
                   alignItems: "center",
                   justifyContent: "center",
                 }}
@@ -388,12 +389,13 @@ const Settings = () => {
          * Calls Clerk's signOut() which redirects to the auth flow.
          */}
         <TouchableOpacity
+          testID="sign-out-button"
           onPress={() => signOut()}
           activeOpacity={0.8}
           style={{
             backgroundColor: colors.card,
             borderWidth: 1,
-            borderColor: colors.destructive + "40",  // 25% opacity red border
+            borderColor: withOpacity(colors.destructive, 0.25),
             borderRadius: 18,
             paddingVertical: 16,
             flexDirection: "row",
@@ -423,7 +425,7 @@ const Settings = () => {
               marginTop: 10,
               backgroundColor: colors.card,
               borderWidth: 1,
-              borderColor: colors.accent + "40",
+              borderColor: withOpacity(colors.accent, 0.25),
               borderRadius: 18,
               paddingVertical: 16,
               flexDirection: "row",

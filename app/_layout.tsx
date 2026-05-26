@@ -1,4 +1,7 @@
 import "@/global.css";
+import { colors } from "@/constants/theme";
+import { setBackgroundColorAsync } from "expo-system-ui";
+import { ThemeProvider, DarkTheme } from "@react-navigation/native";
 import { ClerkProvider, useAuth, useUser } from "@clerk/expo";
 import { tokenCache } from "@clerk/expo/token-cache";
 import { SplashScreen, Stack, useRouter, useSegments, usePathname } from "expo-router";
@@ -16,6 +19,19 @@ import {
   getExpoPushToken,
 } from "@/utils/notifications";
 
+const AppTheme = {
+  ...DarkTheme,
+  colors: {
+    ...DarkTheme.colors,
+    primary: colors.accent,
+    background: colors.background,
+    card: colors.card,
+    text: colors.primary,
+    border: colors.border,
+    notification: colors.accent,
+  },
+};
+
 const posthogKey = process.env.EXPO_PUBLIC_POSTHOG_KEY;
 const posthogHost = process.env.EXPO_PUBLIC_POSTHOG_HOST;
 
@@ -29,6 +45,7 @@ if (!publishableKey) {
 }
 
 SplashScreen.preventAutoHideAsync().catch(console.error);
+setBackgroundColorAsync(colors.background).catch(console.error);
 
 configureNotificationHandler();
 
@@ -117,7 +134,17 @@ function InitialLayout() {
     return <AppSplashScreen />;
   }
 
-  return <Stack screenOptions={{ headerShown: false }} />;
+  return (
+    <ThemeProvider value={AppTheme}>
+      <Stack
+        screenOptions={{
+          headerShown: false,
+          animation: "none",
+          contentStyle: { backgroundColor: colors.background },
+        }}
+      />
+    </ThemeProvider>
+  );
 }
 
 export default function RootLayout() {

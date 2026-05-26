@@ -20,7 +20,7 @@
 import { colors } from "@/constants/theme";
 import { Ionicons } from "@expo/vector-icons";
 import dayjs from "dayjs";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Modal,
   Pressable,
@@ -147,6 +147,13 @@ const CalendarPicker = ({
     const parsed = parseValue(value);
     return parsed ? parsed.year() : dayjs().year();
   });
+
+  // Sync the displayed month/year whenever the value prop changes externally.
+  useEffect(() => {
+    const parsed = parseValue(value);
+    setViewMonth(parsed ? parsed.month() : dayjs().month());
+    setViewYear(parsed ? parsed.year() : dayjs().year());
+  }, [value]);
 
   // ── Derived values ──────────────────────────────────────────────────────────
 

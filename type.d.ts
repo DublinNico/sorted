@@ -33,6 +33,7 @@ declare global {
         expanded: boolean;
         onPress: () => void;
         onCancelPress?: () => void;
+        onEditPress?: () => void;
         isCancelling?: boolean;
     }
 

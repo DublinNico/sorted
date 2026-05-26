@@ -17,17 +17,18 @@ interface PushMessage {
   priority?: "high";
 }
 
-Deno.serve(async (req) => {
+// deno-lint-ignore no-explicit-any
+export async function handler(req: Request, supabaseOverride?: any): Promise<Response> {
   // Auth: only allow calls from Supabase itself (pg_cron HTTP or dashboard invoke).
   const authHeader = req.headers.get("Authorization");
   const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
-  if (!authHeader || authHeader !== `Bearer ${serviceKey}`) {
+  if (!serviceKey || !authHeader || authHeader !== `Bearer ${serviceKey}`) {
     return new Response("Unauthorized", { status: 401 });
   }
 
-  const supabase = createClient(
+  const supabase = supabaseOverride ?? createClient(
     Deno.env.get("SUPABASE_URL")!,
-    serviceKey!
+    serviceKey,
   );
 
   const today = new Date();
@@ -127,7 +128,14 @@ Deno.serve(async (req) => {
     });
 
     if (res.ok) {
-      sent += chunk.length;
+      const json = await res.json() as { data?: Array<{ status: string; message?: string }> };
+      for (const ticket of json.data ?? []) {
+        if (ticket.status === "ok") {
+          sent += 1;
+        } else {
+          console.error("Expo push ticket error:", ticket.message ?? ticket.status);
+        }
+      }
     } else {
       const text = await res.text();
       console.error("Expo push error:", text);
@@ -138,4 +146,6 @@ Deno.serve(async (req) => {
   return new Response(JSON.stringify({ sent }), {
     headers: { "Content-Type": "application/json" },
   });
-});
+}
+
+Deno.serve((req) => handler(req));

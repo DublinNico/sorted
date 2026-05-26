@@ -141,13 +141,11 @@ export default function NotificationsScreen() {
     if (!userId) return;
     getNotificationPrefs(supabase, userId)
       .then((remote) => {
-        setPrefs((prev) => ({
-          ...prev,
-          pushEnabled: remote.enabled,
-          upcomingEnabled: remote.enabled,
-        }));
+        setPrefs((prev) => ({ ...prev, pushEnabled: remote.enabled }));
       })
-      .catch(() => {}); // silently fall back to defaults
+      .catch((err) => {
+        console.error("Failed to load notification prefs:", err);
+      });
   }, [userId]);
 
   const update = async (patch: Partial<LocalPrefs>) => {
@@ -220,14 +218,14 @@ export default function NotificationsScreen() {
         <SettingRow
           icon="mail-outline"
           title="Email"
-          description="Receive email updates"
+          description="Receive email updates (saved locally)"
           value={prefs.emailEnabled}
           onValueChange={(v) => update({ emailEnabled: v })}
         />
         <SettingRow
           icon="chatbubble-outline"
           title="SMS"
-          description="Text message alerts"
+          description="Text message alerts (saved locally)"
           value={prefs.smsEnabled}
           onValueChange={(v) => update({ smsEnabled: v })}
         />

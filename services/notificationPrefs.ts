@@ -18,7 +18,7 @@ export async function getNotificationPrefs(
     .maybeSingle();
 
   if (error) throw error;
-  if (!data) return DEFAULTS;
+  if (!data) return { enabled: DEFAULTS.enabled, daysBefore: [...DEFAULTS.daysBefore] };
   return { enabled: data.enabled, daysBefore: data.days_before };
 }
 

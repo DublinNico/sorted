@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Privacy Policy — Sorted</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background: #0b3d2e;
+      color: #f5f0e8;
+      line-height: 1.7;
+      padding: 40px 20px 80px;
+    }
+
+    .container {
+      max-width: 720px;
+      margin: 0 auto;
+    }
+
+    .logo {
+      font-size: 22px;
+      font-weight: 700;
+      color: #c9a84c;
+      margin-bottom: 8px;
+      letter-spacing: 0.5px;
+    }
+
+    .meta {
+      font-size: 13px;
+      color: rgba(245,240,232,0.55);
+      margin-bottom: 40px;
+    }
+
+    h1 {
+      font-size: 32px;
+      font-weight: 700;
+      color: #f5f0e8;
+      margin-bottom: 6px;
+    }
+
+    h2 {
+      font-size: 18px;
+      font-weight: 700;
+      color: #c9a84c;
+      margin-top: 40px;
+      margin-bottom: 14px;
+    }
+
+    h3 {
+      font-size: 15px;
+      font-weight: 600;
+      color: #f5f0e8;
+      margin-top: 24px;
+      margin-bottom: 10px;
+    }
+
+    p {
+      font-size: 15px;
+      color: rgba(245,240,232,0.85);
+      margin-bottom: 14px;
+    }
+
+    ul {
+      margin: 0 0 14px 20px;
+    }
+
+    ul li {
+      font-size: 15px;
+      color: rgba(245,240,232,0.85);
+      margin-bottom: 6px;
+    }
+
+    strong {
+      color: #f5f0e8;
+      font-weight: 600;
+    }
+
+    a {
+      color: #c9a84c;
+      text-decoration: none;
+    }
+
+    a:hover {
+      text-decoration: underline;
+    }
+
+    hr {
+      border: none;
+      border-top: 1px solid rgba(245,240,232,0.1);
+      margin: 36px 0;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 14px;
+      font-size: 14px;
+    }
+
+    th {
+      text-align: left;
+      padding: 10px 12px;
+      background: rgba(245,240,232,0.07);
+      color: rgba(245,240,232,0.55);
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 0.6px;
+      text-transform: uppercase;
+    }
+
+    td {
+      padding: 10px 12px;
+      border-top: 1px solid rgba(245,240,232,0.08);
+      color: rgba(245,240,232,0.85);
+      vertical-align: top;
+    }
+
+    .footer {
+      margin-top: 60px;
+      font-size: 13px;
+      color: rgba(245,240,232,0.4);
+      text-align: center;
+    }
+
+    .footer a {
+      color: rgba(245,240,232,0.4);
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+
+    <div class="logo">Sorted</div>
+    <h1>Privacy Policy</h1>
+    <p class="meta">Last updated: 26 May 2025 &nbsp;·&nbsp; Contact: <a href="mailto:support@sorted.ie">support@sorted.ie</a></p>
+
+    <hr>
+
+    <h2>1. Who We Are</h2>
+    <p>Sorted ("we", "us", "our") is a subscription and bill tracking application. We are the data controller responsible for your personal data under the EU General Data Protection Regulation (GDPR) and the Irish Data Protection Acts 1988–2018.</p>
+    <p>If you have any questions about how we handle your data, contact us at <strong>support@sorted.ie</strong>.</p>
+
+    <hr>
+
+    <h2>2. What Data We Collect</h2>
+
+    <h3>2.1 Account Data</h3>
+    <p>When you create an account we collect:</p>
+    <ul>
+      <li>Your <strong>email address</strong></li>
+      <li>Your <strong>password</strong> (stored as a secure hash — we never store your password in plain text)</li>
+      <li>Your <strong>display name</strong>, if you choose to provide one</li>
+    </ul>
+
+    <h3>2.2 Subscription Data</h3>
+    <p>Data you enter into the app about your subscriptions and bills:</p>
+    <ul>
+      <li>Service name, price, billing frequency, and currency</li>
+      <li>Renewal and start dates</li>
+      <li>Category and status</li>
+      <li>Service logo (fetched from a public domain lookup — no personal data)</li>
+    </ul>
+    <p>This data is stored on our behalf by Supabase (see Section 5).</p>
+
+    <h3>2.3 Push Notification Token</h3>
+    <p>If you grant notification permission, we store a <strong>device push token</strong> issued by Expo's push notification service. This token is used solely to deliver renewal reminders to your device. It does not identify you personally.</p>
+
+    <h3>2.4 Biometric Preference</h3>
+    <p>We store a single boolean flag indicating whether you have enabled biometric login (Face ID / fingerprint). We do <strong>not</strong> collect, store, or transmit any biometric data. Biometric verification is performed entirely on your device by the operating system.</p>
+
+    <h3>2.5 Usage Analytics</h3>
+    <p>We collect anonymised analytics data including:</p>
+    <ul>
+      <li>Screens visited</li>
+      <li>Feature interactions (e.g. subscription added, notification toggled)</li>
+      <li>App version and device type</li>
+    </ul>
+    <p>Analytics are collected via PostHog and used only to understand how users interact with the app in order to improve it. No analytics data is sold or shared with advertisers.</p>
+
+    <hr>
+
+    <h2>3. How We Use Your Data</h2>
+
+    <table>
+      <thead>
+        <tr>
+          <th>Data</th>
+          <th>Purpose</th>
+          <th>Legal Basis</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Email address and password</td>
+          <td>Account creation and authentication</td>
+          <td>Performance of a contract (Art. 6(1)(b) GDPR)</td>
+        </tr>
+        <tr>
+          <td>Subscription data</td>
+          <td>Core app functionality — tracking your bills</td>
+          <td>Performance of a contract (Art. 6(1)(b) GDPR)</td>
+        </tr>
+        <tr>
+          <td>Push notification token</td>
+          <td>Sending renewal reminders you have opted into</td>
+          <td>Consent (Art. 6(1)(a) GDPR)</td>
+        </tr>
+        <tr>
+          <td>Biometric preference flag</td>
+          <td>Enabling biometric login on your device</td>
+          <td>Performance of a contract (Art. 6(1)(b) GDPR)</td>
+        </tr>
+        <tr>
+          <td>Usage analytics</td>
+          <td>Improving the app</td>
+          <td>Legitimate interests (Art. 6(1)(f) GDPR)</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <p>We do not use your data for advertising, profiling, or automated decision-making.</p>
+
+    <hr>
+
+    <h2>4. Data Retention</h2>
+
+    <table>
+      <thead>
+        <tr>
+          <th>Data</th>
+          <th>Retention Period</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Account and subscription data</td>
+          <td>Retained for as long as your account is active. Deleted within 30 days of account deletion.</td>
+        </tr>
+        <tr>
+          <td>Push notification token</td>
+          <td>Deleted when you disable notifications or delete your account.</td>
+        </tr>
+        <tr>
+          <td>Analytics events</td>
+          <td>Retained for 12 months, then automatically deleted by PostHog.</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <hr>
+
+    <h2>5. Third-Party Services (Sub-processors)</h2>
+    <p>We share your data with the following trusted third-party services solely to provide the app's functionality. We have data processing agreements in place with each.</p>
+
+    <table>
+      <thead>
+        <tr>
+          <th>Service</th>
+          <th>Purpose</th>
+          <th>Location</th>
+          <th>Privacy Info</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>Clerk</strong></td>
+          <td>User authentication</td>
+          <td>United States (SCCs apply)</td>
+          <td><a href="https://clerk.com/privacy" target="_blank">clerk.com/privacy</a></td>
+        </tr>
+        <tr>
+          <td><strong>Supabase</strong></td>
+          <td>Database storage</td>
+          <td>European Union</td>
+          <td><a href="https://supabase.com/privacy" target="_blank">supabase.com/privacy</a></td>
+        </tr>
+        <tr>
+          <td><strong>PostHog</strong></td>
+          <td>Product analytics</td>
+          <td>European Union</td>
+          <td><a href="https://posthog.com/privacy" target="_blank">posthog.com/privacy</a></td>
+        </tr>
+        <tr>
+          <td><strong>Expo</strong></td>
+          <td>Push notification delivery</td>
+          <td>United States (SCCs apply)</td>
+          <td><a href="https://expo.dev/privacy" target="_blank">expo.dev/privacy</a></td>
+        </tr>
+      </tbody>
+    </table>
+
+    <p>We do not sell your personal data to any third party.</p>
+
+    <hr>
+
+    <h2>6. Your Rights Under GDPR</h2>
+    <p>As a data subject you have the following rights:</p>
+    <ul>
+      <li><strong>Right of access</strong> — request a copy of the personal data we hold about you</li>
+      <li><strong>Right to rectification</strong> — correct inaccurate data</li>
+      <li><strong>Right to erasure</strong> — request deletion of your account and all associated data</li>
+      <li><strong>Right to restriction</strong> — ask us to restrict processing of your data</li>
+      <li><strong>Right to data portability</strong> — receive your data in a structured, machine-readable format</li>
+      <li><strong>Right to object</strong> — object to processing based on legitimate interests (e.g. analytics)</li>
+      <li><strong>Right to withdraw consent</strong> — withdraw notification consent at any time in the app settings</li>
+    </ul>
+    <p>To exercise any of these rights, email <strong>support@sorted.ie</strong>. We will respond within 30 days.</p>
+    <p>You also have the right to lodge a complaint with the Irish Data Protection Commission (DPC) at <a href="https://www.dataprotection.ie" target="_blank">dataprotection.ie</a>.</p>
+
+    <hr>
+
+    <h2>7. Push Notifications</h2>
+    <p>Push notifications are entirely optional. You can enable or disable them at any time in <strong>Settings → Notifications</strong>. Disabling notifications removes your push token from our servers. We will never send you marketing messages via push notifications — they are used only to remind you of upcoming subscription renewals.</p>
+
+    <hr>
+
+    <h2>8. Children</h2>
+    <p>Sorted is not directed at children under the age of 16. We do not knowingly collect personal data from anyone under 16. If you believe a child has provided us with personal data, contact us at <strong>support@sorted.ie</strong> and we will delete it promptly.</p>
+
+    <hr>
+
+    <h2>9. Security</h2>
+    <p>We implement appropriate technical and organisational measures to protect your data:</p>
+    <ul>
+      <li>All data in transit is encrypted via TLS</li>
+      <li>Data at rest is encrypted by Supabase</li>
+      <li>Authentication is managed by Clerk, which is SOC 2 Type II certified</li>
+      <li>Biometric data never leaves your device</li>
+    </ul>
+    <p>No method of transmission or storage is 100% secure. If you become aware of a security issue, please contact <strong>support@sorted.ie</strong>.</p>
+
+    <hr>
+
+    <h2>10. Changes to This Policy</h2>
+    <p>We may update this policy from time to time. When we make material changes we will update the "Last updated" date at the top of this document and, where appropriate, notify you via the app. Continued use of Sorted after a change constitutes acceptance of the updated policy.</p>
+
+    <hr>
+
+    <h2>11. Contact</h2>
+    <p><strong>Email:</strong> <a href="mailto:support@sorted.ie">support@sorted.ie</a><br>
+    <strong>App:</strong> Sorted — Subscription Tracker</p>
+    <p>For complaints or data subject requests, email us and we will respond within 30 days.</p>
+
+    <div class="footer">
+      <p>&copy; 2025 Sorted &nbsp;·&nbsp; <a href="terms.html">Terms of Service</a></p>
+    </div>
+
+  </div>
+</body>
+</html>

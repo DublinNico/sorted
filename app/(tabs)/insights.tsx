@@ -45,6 +45,7 @@ const CATEGORY_COLORS: Record<string, string> = {
   Music:             "#9B59B6",
   Housing:           "#8B4513",
   Utilities:         "#FFD700",
+  Fitness:           "#FF6B35",
   Other:             "#7F8C8D",
 };
 

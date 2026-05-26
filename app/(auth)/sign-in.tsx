@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useSignIn } from "@clerk/expo";
 import { Link } from "expo-router";
 import {
@@ -10,11 +10,20 @@ import {
   ScrollView,
   Platform,
   ActivityIndicator,
+  Alert,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { colors } from "@/constants/theme";
 import SortedLogo from "@/components/SortedLogo";
+import {
+  authenticateWithBiometrics,
+  getStoredCredentials,
+  isBiometricsEnabled,
+  isBiometricsSupported,
+  saveCredentials,
+  setBiometricsEnabled,
+} from "@/utils/biometrics";
 
 const safeArea = {
   flex: 1,
@@ -138,16 +147,241 @@ function MfaScreen({
   );
 }
 
+// ─── Forgot Password screen ───────────────────────────────────────────────────
+
+function ForgotPasswordScreen({
+  initialEmail,
+  onBack,
+  signIn,
+}: {
+  initialEmail: string;
+  onBack: () => void;
+  signIn: NonNullable<ReturnType<typeof useSignIn>["signIn"]>;
+}) {
+  const [step, setStep]                       = useState<"email" | "verify">("email");
+  const [resetEmail, setResetEmail]           = useState(initialEmail);
+  const [code, setCode]                       = useState("");
+  const [newPassword, setNewPassword]         = useState("");
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [loading, setLoading]                 = useState(false);
+  const [error, setError]                     = useState("");
+
+  const handleSend = async () => {
+    setError("");
+    setLoading(true);
+    try {
+      await signIn.create({ strategy: "reset_password_email_code", identifier: resetEmail });
+      setStep("verify");
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Failed to send reset code.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleReset = async () => {
+    setError("");
+    setLoading(true);
+    try {
+      const result = await signIn.attemptFirstFactor({
+        strategy: "reset_password_email_code",
+        code,
+        password: newPassword,
+      });
+      if (result.status === "complete") {
+        await signIn.finalize();
+      } else {
+        setError("Reset incomplete. Please try again.");
+      }
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Failed to reset password.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <SafeAreaView style={safeArea}>
+      <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={{ flex: 1 }}>
+        <ScrollView
+          style={{ flex: 1 }}
+          contentContainerStyle={{ flexGrow: 1, paddingHorizontal: 24, paddingBottom: 40, paddingTop: 48 }}
+          keyboardShouldPersistTaps="handled"
+        >
+          <View style={{ alignItems: "center", marginBottom: 40 }}>
+            <SortedLogo size={72} glow />
+            <Text style={{ fontSize: 28, fontFamily: "sans-extrabold", color: colors.primary, marginTop: 16 }}>
+              Sorted
+            </Text>
+          </View>
+
+          <Text style={{ fontSize: 26, fontFamily: "sans-bold", color: colors.primary, marginBottom: 6 }}>
+            {step === "email" ? "Reset Password" : "Check your email"}
+          </Text>
+          <Text style={{ fontSize: 15, fontFamily: "sans-medium", color: colors.mutedForeground, marginBottom: 32 }}>
+            {step === "email"
+              ? "Enter your email and we'll send a reset code."
+              : `Enter the code sent to ${resetEmail} and choose a new password.`}
+          </Text>
+
+          {step === "email" ? (
+            <View style={{ gap: 6, marginBottom: 24 }}>
+              <Text style={{ fontSize: 14, fontFamily: "sans-semibold", color: colors.primary }}>Email</Text>
+              <TextInput
+                testID="reset-email-input"
+                value={resetEmail}
+                onChangeText={setResetEmail}
+                placeholder="john.doe@example.com"
+                placeholderTextColor={colors.mutedForeground}
+                keyboardType="email-address"
+                autoCapitalize="none"
+                autoCorrect={false}
+                style={{
+                  backgroundColor: colors.card,
+                  borderRadius: 16,
+                  borderWidth: 1,
+                  borderColor: colors.border,
+                  paddingHorizontal: 16,
+                  paddingVertical: 16,
+                  fontSize: 15,
+                  fontFamily: "sans-medium",
+                  color: colors.primary,
+                }}
+              />
+            </View>
+          ) : (
+            <>
+              <View style={{ gap: 6, marginBottom: 16 }}>
+                <Text style={{ fontSize: 14, fontFamily: "sans-semibold", color: colors.primary }}>Reset Code</Text>
+                <TextInput
+                  testID="reset-code-input"
+                  value={code}
+                  onChangeText={setCode}
+                  placeholder="000000"
+                  placeholderTextColor={colors.mutedForeground}
+                  keyboardType="number-pad"
+                  maxLength={6}
+                  autoFocus
+                  style={{
+                    backgroundColor: colors.card,
+                    borderRadius: 16,
+                    borderWidth: 1,
+                    borderColor: colors.border,
+                    paddingHorizontal: 16,
+                    paddingVertical: 16,
+                    fontSize: 16,
+                    fontFamily: "sans-medium",
+                    color: colors.primary,
+                  }}
+                />
+              </View>
+              <View style={{ gap: 6, marginBottom: 24 }}>
+                <Text style={{ fontSize: 14, fontFamily: "sans-semibold", color: colors.primary }}>New Password</Text>
+                <View style={{ position: "relative" }}>
+                  <TextInput
+                    testID="reset-new-password-input"
+                    value={newPassword}
+                    onChangeText={setNewPassword}
+                    placeholder="At least 8 characters"
+                    placeholderTextColor={colors.mutedForeground}
+                    secureTextEntry={!showNewPassword}
+                    autoCorrect={false}
+                    style={{
+                      backgroundColor: colors.card,
+                      borderRadius: 16,
+                      borderWidth: 1,
+                      borderColor: colors.border,
+                      paddingHorizontal: 16,
+                      paddingVertical: 16,
+                      paddingRight: 52,
+                      fontSize: 15,
+                      fontFamily: "sans-medium",
+                      color: colors.primary,
+                    }}
+                  />
+                  <Pressable
+                    onPress={() => setShowNewPassword((v) => !v)}
+                    hitSlop={8}
+                    style={{ position: "absolute", right: 16, top: 0, bottom: 0, justifyContent: "center" }}
+                  >
+                    <Ionicons
+                      name={showNewPassword ? "eye-off-outline" : "eye-outline"}
+                      size={20}
+                      color={colors.mutedForeground}
+                    />
+                  </Pressable>
+                </View>
+              </View>
+            </>
+          )}
+
+          {!!error && (
+            <Text style={{ fontSize: 13, fontFamily: "sans-medium", color: colors.destructive, textAlign: "center", marginBottom: 12 }}>
+              {error}
+            </Text>
+          )}
+
+          <Pressable
+            testID="reset-action-button"
+            onPress={step === "email" ? handleSend : handleReset}
+            disabled={loading || (step === "email" ? !resetEmail.includes("@") : code.length < 6 || newPassword.length < 8)}
+            style={{
+              backgroundColor: colors.accent,
+              borderRadius: 16,
+              paddingVertical: 16,
+              alignItems: "center",
+              marginBottom: 12,
+              opacity: loading ? 0.7 : 1,
+            }}
+          >
+            {loading
+              ? <ActivityIndicator color={colors.background} size="small" />
+              : <Text style={{ fontSize: 16, fontFamily: "sans-bold", color: colors.background }}>
+                  {step === "email" ? "Send Reset Code" : "Reset Password"}
+                </Text>
+            }
+          </Pressable>
+
+          <Pressable onPress={onBack} style={{ alignItems: "center", paddingVertical: 12 }}>
+            <Text style={{ fontSize: 14, fontFamily: "sans-medium", color: colors.mutedForeground }}>
+              Back to sign in
+            </Text>
+          </Pressable>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
+  );
+}
+
 // ─── Sign In screen ───────────────────────────────────────────────────────────
 
 export default function SignIn() {
   const { signIn, errors, fetchStatus } = useSignIn();
 
-  const [email, setEmail]               = useState("");
-  const [password, setPassword]         = useState("");
-  const [showPassword, setShowPassword] = useState(false);
-  const [code, setCode]                 = useState("");
-  const [errorMessage, setErrorMessage] = useState("");
+  const [email, setEmail]                       = useState("");
+  const [password, setPassword]                 = useState("");
+  const [showPassword, setShowPassword]         = useState(false);
+  const [code, setCode]                         = useState("");
+  const [errorMessage, setErrorMessage]         = useState("");
+  const [showBiometricBtn, setShowBiometricBtn] = useState(false);
+  const [bioLoading, setBioLoading]             = useState(false);
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
+
+  // ── Check if biometric sign-in is available ─────────────────────────────────
+  useEffect(() => {
+    (async () => {
+      try {
+        const enabled = await isBiometricsEnabled();
+        if (!enabled) return;
+        const creds = await getStoredCredentials();
+        if (!creds) return;
+        const supported = await isBiometricsSupported();
+        setShowBiometricBtn(supported);
+      } catch {
+        // silently ignore — biometrics simply won't show
+      }
+    })();
+  }, []);
 
   if (!signIn) {
     return (
@@ -160,11 +394,47 @@ export default function SignIn() {
   const isLoading = fetchStatus === "fetching";
   const canSubmit = email.includes("@") && email.includes(".") && password.length > 0 && !isLoading;
 
+  // ── Finalize (complete) the sign-in attempt ──────────────────────────────────
   const finalize = async () => {
     const { error } = await signIn.finalize();
     if (error) setErrorMessage(error.longMessage ?? error.message ?? "Failed to complete sign in.");
   };
 
+  // ── Offer to enable biometrics after a successful password sign-in ──────────
+  const offerBiometrics = async (usedEmail: string, usedPassword: string) => {
+    try {
+      const supported = await isBiometricsSupported();
+      if (!supported) return;
+      const alreadyEnabled = await isBiometricsEnabled();
+      if (alreadyEnabled) {
+        // Silently refresh stored credentials in case password changed.
+        await saveCredentials(usedEmail, usedPassword);
+        return;
+      }
+      Alert.alert(
+        "Enable Biometric Login",
+        "Sign in faster next time using your fingerprint or Face ID.",
+        [
+          { text: "Not Now", style: "cancel" },
+          {
+            text: "Enable",
+            onPress: async () => {
+              const authed = await authenticateWithBiometrics("Confirm to enable biometric login");
+              if (authed) {
+                await saveCredentials(usedEmail, usedPassword);
+                await setBiometricsEnabled(true);
+                setShowBiometricBtn(true);
+              }
+            },
+          },
+        ]
+      );
+    } catch {
+      // non-fatal
+    }
+  };
+
+  // ── Email + password sign-in ─────────────────────────────────────────────────
   const handleSignIn = async () => {
     setErrorMessage("");
     const { error } = await signIn.password({ emailAddress: email, password });
@@ -174,6 +444,7 @@ export default function SignIn() {
     }
     if (signIn.status === "complete") {
       await finalize();
+      await offerBiometrics(email, password);
     } else if (signIn.status === "needs_second_factor" || signIn.status === "needs_client_trust") {
       const { error: mfaError } = await signIn.mfa.sendEmailCode();
       if (mfaError) setErrorMessage(mfaError.longMessage ?? mfaError.message ?? "Failed to send verification code.");
@@ -182,6 +453,45 @@ export default function SignIn() {
     }
   };
 
+  // ── Biometric sign-in ────────────────────────────────────────────────────────
+  const handleBiometricSignIn = async () => {
+    setBioLoading(true);
+    setErrorMessage("");
+    try {
+      const authed = await authenticateWithBiometrics();
+      if (!authed) return;
+
+      const creds = await getStoredCredentials();
+      if (!creds) {
+        setShowBiometricBtn(false);
+        setErrorMessage("No stored credentials. Please sign in with your password.");
+        return;
+      }
+
+      const { error } = await signIn.password({ emailAddress: creds.email, password: creds.password });
+      if (error) {
+        setErrorMessage("Biometric sign-in failed. Please use your password.");
+        // Disable biometrics — stored password is likely stale.
+        await setBiometricsEnabled(false);
+        setShowBiometricBtn(false);
+        return;
+      }
+
+      if (signIn.status === "complete") {
+        await finalize();
+      } else if (signIn.status === "needs_second_factor" || signIn.status === "needs_client_trust") {
+        setEmail(creds.email);
+        const { error: mfaError } = await signIn.mfa.sendEmailCode();
+        if (mfaError) setErrorMessage(mfaError.longMessage ?? mfaError.message ?? "Failed to send code.");
+      }
+    } catch (err: unknown) {
+      setErrorMessage(err instanceof Error ? err.message : "Biometric sign-in failed.");
+    } finally {
+      setBioLoading(false);
+    }
+  };
+
+  // ── MFA verify ───────────────────────────────────────────────────────────────
   const handleVerify = async () => {
     const { error } = await signIn.mfa.verifyEmailCode({ code });
     if (error) {
@@ -190,6 +500,16 @@ export default function SignIn() {
     }
     if (signIn.status === "complete") await finalize();
   };
+
+  if (showForgotPassword) {
+    return (
+      <ForgotPasswordScreen
+        initialEmail={email}
+        onBack={() => setShowForgotPassword(false)}
+        signIn={signIn}
+      />
+    );
+  }
 
   if (signIn.status === "needs_second_factor" || signIn.status === "needs_client_trust") {
     return (
@@ -241,10 +561,55 @@ export default function SignIn() {
             Sign in to continue
           </Text>
 
+          {/* ── Biometric sign-in button ─────────────────────────────────── */}
+          {showBiometricBtn && (
+            <Pressable
+              testID="sign-in-biometric-button"
+              onPress={handleBiometricSignIn}
+              disabled={bioLoading || isLoading}
+              style={{
+                backgroundColor: colors.card,
+                borderRadius: 16,
+                borderWidth: 1,
+                borderColor: colors.accent + "60",
+                paddingVertical: 16,
+                flexDirection: "row",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: 10,
+                marginBottom: 20,
+              }}
+            >
+              {bioLoading
+                ? <ActivityIndicator color={colors.accent} size="small" />
+                : (
+                  <>
+                    <Ionicons name="finger-print-outline" size={22} color={colors.accent} />
+                    <Text style={{ fontSize: 16, fontFamily: "sans-semibold", color: colors.accent }}>
+                      Sign in with Biometrics
+                    </Text>
+                  </>
+                )
+              }
+            </Pressable>
+          )}
+
+          {/* ── Divider (shown only when biometric button is visible) ─────── */}
+          {showBiometricBtn && (
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 10, marginBottom: 20 }}>
+              <View style={{ flex: 1, height: 1, backgroundColor: colors.border }} />
+              <Text style={{ fontSize: 13, fontFamily: "sans-regular", color: colors.mutedForeground }}>
+                or sign in with email
+              </Text>
+              <View style={{ flex: 1, height: 1, backgroundColor: colors.border }} />
+            </View>
+          )}
+
           {/* ── Email field ──────────────────────────────────────────────── */}
           <View style={{ gap: 6, marginBottom: 16 }}>
             <Text style={{ fontSize: 14, fontFamily: "sans-semibold", color: colors.primary }}>Email</Text>
             <TextInput
+              testID="sign-in-email"
               value={email}
               onChangeText={(v) => { setEmail(v); setErrorMessage(""); }}
               placeholder="john.doe@example.com"
@@ -278,6 +643,7 @@ export default function SignIn() {
             <Text style={{ fontSize: 14, fontFamily: "sans-semibold", color: colors.primary }}>Password</Text>
             <View style={{ position: "relative" }}>
               <TextInput
+                testID="sign-in-password"
                 value={password}
                 onChangeText={(v) => { setPassword(v); setErrorMessage(""); }}
                 placeholder="••••••••••"
@@ -321,7 +687,7 @@ export default function SignIn() {
 
           {/* ── Forgot password ──────────────────────────────────────────── */}
           <View style={{ alignItems: "flex-end", marginBottom: 28 }}>
-            <Pressable hitSlop={8}>
+            <Pressable testID="forgot-password-link" hitSlop={8} onPress={() => setShowForgotPassword(true)}>
               <Text style={{ fontSize: 14, fontFamily: "sans-semibold", color: colors.accent }}>
                 Forgot Password?
               </Text>
@@ -337,6 +703,7 @@ export default function SignIn() {
 
           {/* ── Sign In button ───────────────────────────────────────────── */}
           <Pressable
+            testID="sign-in-button"
             onPress={handleSignIn}
             disabled={!canSubmit}
             style={{
@@ -356,7 +723,7 @@ export default function SignIn() {
           {/* ── Sign up link ─────────────────────────────────────────────── */}
           <View style={{ flexDirection: "row", justifyContent: "center", gap: 4 }}>
             <Text style={{ fontSize: 14, fontFamily: "sans-medium", color: colors.mutedForeground }}>
-              Don't have an account?
+              {"Don’t have an account?"}
             </Text>
             <Link href="/(auth)/sign-up" asChild>
               <Pressable>

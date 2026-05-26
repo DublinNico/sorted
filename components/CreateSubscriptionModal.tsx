@@ -32,11 +32,12 @@
 import "@/global.css";
 import CalendarPicker from "@/components/CalendarPicker";
 import { colors } from "@/constants/theme";
+import { getDomain } from "@/utils/domainUtils";
 import { Ionicons } from "@expo/vector-icons";
 import clsx from "clsx";
 import dayjs from "dayjs";
 import { usePostHog } from "posthog-react-native";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   KeyboardAvoidingView,
   Modal,
@@ -48,131 +49,6 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-
-// ─── Domain lookup table ──────────────────────────────────────────────────────
-
-/**
- * DOMAIN_OVERRIDES
- * Maps common Irish/global service names (lowercase) to their canonical domains
- * so the logos-api returns the correct service icon.
- *
- * Lookup order in getDomain():
- *   1. Exact full-name match  (e.g. "bord gáis energy" → "bordgaisenergy.ie")
- *   2. First-word match       (e.g. "vodafone ireland" → first word "vodafone")
- *   3. Fallback               (first word + ".com")
- */
-const DOMAIN_OVERRIDES: Record<string, string> = {
-  // ── Energy suppliers ──────────────────────────────────────────────────────
-  esb:                    "esb.ie",
-  "electric ireland":     "electricireland.ie",
-  energia:                "energia.ie",
-  "sse airtricity":       "sseairtricity.com",
-  airtricity:             "sseairtricity.com",
-  "bord gais energy":     "bordgaisenergy.ie",
-  "bord gáis energy":     "bordgaisenergy.ie",
-  "bord gais":            "bordgaisenergy.ie",
-  "bord gáis":            "bordgaisenergy.ie",
-  prepaypower:            "prepaypower.ie",
-  "prepay power":         "prepaypower.ie",
-  pinergy:                "pinergy.ie",
-  flogas:                 "flogas.ie",
-  "community power":      "communitypower.ie",
-  waterpower:             "waterpower.ie",
-  "water power":          "waterpower.ie",
-  "yuno energy":          "yunoenergy.ie",
-  yuno:                   "yunoenergy.ie",
-  "go power":             "gopower.ie",
-
-  // ── Water ─────────────────────────────────────────────────────────────────
-  "uisce éireann":        "water.ie",
-  "uisce eireann":        "water.ie",
-  "irish water":          "water.ie",
-
-  // ── Telecoms ──────────────────────────────────────────────────────────────
-  eir:                    "eir.ie",
-  vodafone:               "vodafone.com",
-  "vodafone ireland":     "vodafone.com",
-  "virgin media":         "virginmedia.ie",
-  sky:                    "sky.com",
-  "sky ireland":          "sky.com",
-  three:                  "three.ie",
-  "three ireland":        "three.ie",
-  "pure telecom":         "puretelecom.ie",
-  digiweb:                "digiweb.ie",
-  imagine:                "imagine.ie",
-  siro:                   "siro.ie",
-
-  // ── Waste ─────────────────────────────────────────────────────────────────
-  greyhound:              "greyhound.ie",
-  panda:                  "panda.ie",
-  "thorntons recycling":  "thorntons-recycling.ie",
-  thorntons:              "thorntons-recycling.ie",
-  "city bin co":          "citybin.com",
-  "city bin":             "citybin.com",
-  oxigen:                 "oxigen.ie",
-  kwd:                    "kwd.ie",
-
-  // ── Banks & Finance ───────────────────────────────────────────────────────
-  aib:                    "aib.ie",
-  "bank of ireland":      "bankofireland.com",
-  "permanent tsb":        "permanenttsb.ie",
-  ptsb:                   "permanenttsb.ie",
-  "an post money":        "anpost.ie",
-  "avant money":          "avantmoney.ie",
-  ebs:                    "ebs.ie",
-  revolut:                "revolut.com",
-  n26:                    "n26.com",
-  bunq:                   "bunq.com",
-
-  // ── Insurance ─────────────────────────────────────────────────────────────
-  aviva:                  "aviva.ie",
-  zurich:                 "zurich.ie",
-  axa:                    "axa.ie",
-  allianz:                "allianz.ie",
-  fbd:                    "fbd.ie",
-  "liberty insurance":    "libertymutual.com",
-  rsa:                    "rsagroup.com",
-  vhi:                    "vhi.ie",
-  "laya healthcare":      "layahealthcare.ie",
-  laya:                   "layahealthcare.ie",
-  "irish life health":    "irishlifehealth.ie",
-  "irish life":           "irishlife.ie",
-
-  // ── Government & services ─────────────────────────────────────────────────
-  "an post":              "anpost.ie",
-  "revenue commissioners":"revenue.ie",
-  "local property tax":   "revenue.ie",
-  "motor tax":            "motortax.ie",
-  "residential tenancies board": "rtb.ie",
-  rtb:                    "rtb.ie",
-
-  // ── Housing ───────────────────────────────────────────────────────────────
-  "tuath housing":        "tuathhousing.ie",
-  tuath:                  "tuathhousing.ie",
-
-  // ── Estate agents ─────────────────────────────────────────────────────────
-  dng:                    "dng.ie",
-  "sherry fitzgerald":    "sherryfitz.ie",
-  "hooke & macdonald":    "hookemacdonald.ie",
-  "hooke and macdonald":  "hookemacdonald.ie",
-  hooke:                  "hookemacdonald.ie",
-  lisney:                 "lisney.ie",
-  "owen reilly":          "owenreilly.com",
-};
-
-/**
- * getDomain
- * Resolves a human-readable service name to a canonical domain string.
- * The domain is used to construct the logos-api icon URI.
- *
- * @param name  Raw service name entered by the user (any case)
- * @returns     Domain string, e.g. "netflix.com" or "eir.ie"
- */
-const getDomain = (name: string): string => {
-  const lower     = name.trim().toLowerCase();
-  const firstWord = lower.split(/\s+/)[0];
-  return DOMAIN_OVERRIDES[lower] ?? DOMAIN_OVERRIDES[firstWord] ?? `${firstWord}.com`;
-};
 
 // ─── Payment types ────────────────────────────────────────────────────────────
 
@@ -192,6 +68,7 @@ const PAYMENT_TYPES = [
   "Utility - Other",
   "Subscription - Entertainment",
   "Subscription - Productivity",
+  "Gym Membership",
   "Subscription - Other",
 ] as const;
 
@@ -212,6 +89,7 @@ const CATEGORIES = [
   "Utilities",
   "Housing",
   "Entertainment",
+  "Fitness",
   "AI Tools",
   "Developer Tools",
   "Design",
@@ -240,8 +118,21 @@ const PAYMENT_TYPE_CATEGORY: Record<PaymentType, Category> = {
   "Utility - Other":         "Utilities",
   "Subscription - Entertainment": "Entertainment",
   "Subscription - Productivity":  "Productivity",
+  "Gym Membership":               "Fitness",
   "Subscription - Other":         "Other",
   "Rent / Housing":               "Housing",
+};
+
+/**
+ * CATEGORY_TO_PAYMENT_TYPE
+ * Reverse of PAYMENT_TYPE_CATEGORY — used to pre-select the payment type
+ * dropdown when editing an existing subscription.
+ */
+const CATEGORY_TO_PAYMENT_TYPE: Partial<Record<string, PaymentType>> = {
+  "Housing":       "Rent / Housing",
+  "Utilities":     "Utility - Electricity",
+  "Entertainment": "Subscription - Entertainment",
+  "Productivity":  "Subscription - Productivity",
 };
 
 // ─── Colour palette ───────────────────────────────────────────────────────────
@@ -288,6 +179,8 @@ interface CreateSubscriptionModalProps {
   visible: boolean;
   onClose: () => void;
   onSubmit: (subscription: Subscription) => void;
+  /** When provided the modal opens in edit mode, pre-filled with this data. */
+  initialData?: Subscription;
 }
 
 // ─── CreateSubscriptionModal ──────────────────────────────────────────────────
@@ -304,7 +197,10 @@ const CreateSubscriptionModal = ({
   visible,
   onClose,
   onSubmit,
+  initialData,
 }: CreateSubscriptionModalProps) => {
+
+  const isEditMode = !!initialData;
 
   // ── Form state ──────────────────────────────────────────────────────────────
 
@@ -322,6 +218,29 @@ const CreateSubscriptionModal = ({
 
   /** True when name is filled and price is a positive number. */
   const isValid = name.trim().length > 0 && !isNaN(parsedPrice) && parsedPrice > 0;
+
+  // ── Pre-fill when opening in edit mode ──────────────────────────────────────
+
+  useEffect(() => {
+    if (visible && initialData) {
+      setName(initialData.name ?? "");
+      setPrice(initialData.price.toString());
+      const b = initialData.billing as "Weekly" | "Monthly" | "Yearly";
+      setBilling(["Weekly", "Monthly", "Yearly"].includes(b) ? b : "Monthly");
+      if (initialData.renewalDate) {
+        setNextPaymentDate(dayjs(initialData.renewalDate).format("DD/MM/YYYY"));
+      }
+      const pt = CATEGORY_TO_PAYMENT_TYPE[initialData.category?.trim() ?? ""] ?? DEFAULT_PAYMENT_TYPE;
+      setPaymentType(pt);
+    } else if (visible && !initialData) {
+      // Reset for a fresh add.
+      setPaymentType(DEFAULT_PAYMENT_TYPE);
+      setName("");
+      setPrice("");
+      setBilling("Monthly");
+      setNextPaymentDate("");
+    }
+  }, [visible, initialData]);
 
   // ── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -394,14 +313,14 @@ const CreateSubscriptionModal = ({
     if (!isValid) return;
 
     const trimmedName = name.trim();
-    const startDate   = dayjs().toISOString();
+    const startDate   = initialData?.startDate ?? dayjs().toISOString();
     const renewalDate = parseDateInput(nextPaymentDate).toISOString();
     const domain      = getDomain(trimmedName);
     const icon        = { uri: `https://logos-api.apistemic.com/domain:${domain}` };
     const category    = PAYMENT_TYPE_CATEGORY[paymentType];
 
     const payload: Subscription = {
-      id:        `${trimmedName.toLowerCase().replace(/[\s/]+/g, "-")}-${Date.now()}`,
+      id:        initialData?.id ?? `${trimmedName.toLowerCase().replace(/[\s/]+/g, "-")}-${Date.now()}`,
       icon,
       name:      trimmedName,
       price:     parsedPrice,
@@ -409,10 +328,10 @@ const CreateSubscriptionModal = ({
       billing,
       frequency: billing,
       category,
-      status:    "active",
+      status:    initialData?.status ?? "active",
       startDate,
       renewalDate,
-      color:     getColorFromName(trimmedName),
+      color:     initialData?.color ?? getColorFromName(trimmedName),
     };
 
     onSubmit(payload);
@@ -453,7 +372,7 @@ const CreateSubscriptionModal = ({
 
         {/* ── Header: title + close button ─────────────────────────────────── */}
         <View className="modal-header">
-          <Text className="modal-title">New Payment</Text>
+          <Text className="modal-title">{isEditMode ? "Edit Payment" : "New Payment"}</Text>
           <Pressable className="modal-close" onPress={handleClose}>
             <Text className="modal-close-text">✕</Text>
           </Pressable>
@@ -529,6 +448,7 @@ const CreateSubscriptionModal = ({
             <View className="auth-field">
               <Text className="auth-label">Name</Text>
               <TextInput
+                testID="subscription-name-input"
                 className="auth-input"
                 placeholder="e.g., Spotify, Electricity, Rent"
                 placeholderTextColor={colors.mutedForeground}
@@ -542,6 +462,7 @@ const CreateSubscriptionModal = ({
             <View className="auth-field">
               <Text className="auth-label">Amount (€)</Text>
               <TextInput
+                testID="subscription-amount-input"
                 className="auth-input"
                 placeholder="9.99"
                 placeholderTextColor={colors.mutedForeground}
@@ -638,11 +559,12 @@ const CreateSubscriptionModal = ({
             {/* ── Submit CTA ────────────────────────────────────────────────── */}
             {/* Disabled (45% opacity gold) until name + valid price are both set. */}
             <Pressable
+              testID="add-payment-button"
               className={clsx("auth-button", !isValid && "auth-button-disabled")}
               onPress={handleSubmit}
               disabled={!isValid}
             >
-              <Text className="auth-button-text">Add Payment</Text>
+              <Text className="auth-button-text">{isEditMode ? "Save Changes" : "Add Payment"}</Text>
             </Pressable>
 
             {/* Bottom breathing room so the button clears the safe area */}

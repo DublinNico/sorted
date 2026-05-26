@@ -9,9 +9,11 @@ import { colors } from "@/constants/theme";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { Pressable, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 export default function SplashPreview() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   return (
     <View style={{ flex: 1 }}>
       <AppSplashScreen />
@@ -20,7 +22,7 @@ export default function SplashPreview() {
         onPress={() => router.back()}
         style={{
           position: "absolute",
-          top: 52,
+          top: insets.top + 12,
           left: 20,
           width: 36,
           height: 36,

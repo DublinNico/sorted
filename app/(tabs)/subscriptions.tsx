@@ -47,7 +47,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
  * Renders the Bills tab — a searchable, filterable list of all subscriptions.
  */
 const Subscriptions = () => {
-  const { subscriptions, deleteSubscription, updateSubscription } = useSubscriptionsStore();
+  const { subscriptions, addSubscription, deleteSubscription, updateSubscription } = useSubscriptionsStore();
   const supabase = useSupabase();
   const { userId } = useAuth();
 
@@ -261,10 +261,16 @@ const Subscriptions = () => {
                 setExpandedId(null);
               }}
               onCancelPress={() => {
+                const captured = item;
+                const prevExpanded = expandedId;
                 deleteSubscription(item.id);
                 setExpandedId(null);
                 if (userId) {
-                  deleteSubscriptionService(supabase, item.id, userId).catch(console.error);
+                  deleteSubscriptionService(supabase, item.id, userId).catch((err) => {
+                    console.error("Delete failed, rolling back:", err);
+                    addSubscription(captured);
+                    setExpandedId(prevExpanded);
+                  });
                 }
               }}
             />
