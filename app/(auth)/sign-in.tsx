@@ -30,7 +30,20 @@ const safeArea = {
   backgroundColor: colors.background,
 } as const;
 
-// ─── MFA screen ───────────────────────────────────────────────────────────────
+/**
+ * Render the multi-factor authentication screen that prompts the user to enter a 6-digit code sent to their email.
+ *
+ * @param email - The email address that received the verification code (displayed to the user).
+ * @param code - The current verification code value shown in the input.
+ * @param setCode - Callback invoked with the new code value when the input changes.
+ * @param onVerify - Callback invoked when the user taps the "Verify Code" action.
+ * @param onResend - Callback invoked when the user requests the code to be resent.
+ * @param onReset - Callback invoked when the user chooses to use a different account.
+ * @param isLoading - When true, disables actions and shows a loading indicator for the verify action.
+ * @param codeError - Optional field-level error message for the code input.
+ * @param errorMessage - Optional general error message displayed below the input.
+ * @returns A React element rendering the MFA verification UI with inputs, status messages, and action buttons.
+ */
 
 function MfaScreen({
   email,
@@ -147,7 +160,16 @@ function MfaScreen({
   );
 }
 
-// ─── Forgot Password screen ───────────────────────────────────────────────────
+/**
+ * Renders a two-step "Forgot Password" UI that sends a reset code to an email and lets the user verify the code and choose a new password.
+ *
+ * The component manages sending the reset code, verifying the code, collecting a new password, and surfaces loading and error states for those steps.
+ *
+ * @param initialEmail - Email to prefill the email input
+ * @param onBack - Callback invoked when the user chooses to go back to the sign-in screen
+ * @param signIn - Clerk `signIn` instance used to create and attempt the reset-password flow
+ * @returns The Forgot Password screen as a React element
+ */
 
 function ForgotPasswordScreen({
   initialEmail,
@@ -353,7 +375,15 @@ function ForgotPasswordScreen({
   );
 }
 
-// ─── Sign In screen ───────────────────────────────────────────────────────────
+/**
+ * Renders the sign-in screen with email/password, optional biometric sign-in, MFA handling, and a forgot-password flow.
+ *
+ * The component manages local UI state (email, password, visibility toggles, MFA code, loading and error states),
+ * performs password and biometric sign-in flows via the Clerk `useSignIn` hook, offers to enable biometrics after a
+ * successful password sign-in, and conditionally renders MFA or forgot-password screens when required.
+ *
+ * @returns The sign-in screen React element.
+ */
 
 export default function SignIn() {
   const { signIn, errors, fetchStatus } = useSignIn();

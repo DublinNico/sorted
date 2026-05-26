@@ -64,7 +64,13 @@ export const overlay = "rgba(0,0,0,0.5)";
 
 // --- Opacity helper ---
 // Appends an 8-digit hex alpha to a 6-digit hex colour token.
-// Only valid for colours already in #RRGGBB form (all `colors.*` values qualify).
+/**
+ * Append an 8-bit alpha component to a 6-digit hex color.
+ *
+ * @param hex - A color in `#RRGGBB` form
+ * @param opacity - Opacity as a number between 0 and 1; values outside this range are clamped
+ * @returns The 8-digit hex string formed by appending a two-digit alpha (`00` = transparent, `ff` = opaque) to `hex`
+ */
 export function withOpacity(hex: string, opacity: number): string {
   const alpha = Math.round(Math.max(0, Math.min(1, opacity)) * 255)
     .toString(16)

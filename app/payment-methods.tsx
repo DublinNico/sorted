@@ -25,7 +25,20 @@ interface PaymentCard {
   isDefault: boolean;
 }
 
-// ─── Add Card Modal ───────────────────────────────────────────────────────────
+/**
+ * Render a modal that collects card number and expiry and lets the user add a new payment card.
+ *
+ * The component sanitizes card number input to digits (max 16), derives the last four digits,
+ * formats expiry as `MM/YY`, and enables submission only when the number has at least 13 digits
+ * and the expiry is five characters long.
+ *
+ * @param visible - Whether the modal is visible.
+ * @param onClose - Callback invoked to close the modal; also clears input fields.
+ * @param onAdd - Callback invoked when a valid card is submitted. Receives `{ type, last4, expiry }`
+ *                where `type` is detected from the entered number, `last4` is the final 4 digits,
+ *                and `expiry` is the formatted expiry string.
+ * @returns The React element representing the add-card modal UI.
+ */
 
 function AddCardModal({
   visible,
@@ -248,7 +261,13 @@ function CardRow({
   );
 }
 
-// ─── Screen ───────────────────────────────────────────────────────────────────
+/**
+ * Render the Payment Methods screen where users can view saved cards, add new cards, set a default card, and remove existing cards.
+ *
+ * Manages local state for the card list and modal visibility. Adding a card generates a unique id and marks the first added card as default. Removing a card prompts for confirmation and, if the default card is removed, assigns the first remaining card as the new default.
+ *
+ * @returns The JSX element for the Payment Methods screen.
+ */
 
 export default function PaymentMethodsScreen() {
   const router = useRouter();

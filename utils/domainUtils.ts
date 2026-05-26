@@ -123,6 +123,12 @@ export const DOMAIN_OVERRIDES: Record<string, string> = {
   "owen reilly":          "owenreilly.com",
 };
 
+/**
+ * Produce a best-effort canonical domain for a provider or organization name.
+ *
+ * @param name - The provider or organization name to resolve.
+ * @returns The canonical domain for `name`: an empty string if `name` is empty; the override entry for the full normalized name if present; otherwise the override for the first word if present; otherwise `${firstWord}.com`.
+ */
 export function getDomain(name: string): string {
   const lower = name.trim().toLowerCase();
   if (!lower) return "";

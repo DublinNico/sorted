@@ -11,6 +11,15 @@ import { useRouter } from "expo-router";
 import { Pressable, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+/**
+ * Development-only screen that previews the application's splash UI with an overlay back button.
+ *
+ * Renders the splash preview and a safe-area-aware back button that navigates back when pressed.
+ *
+ * @returns The React element for the splash preview screen.
+ *
+ * @internal Dev-only; remove before production.
+ */
 export default function SplashPreview() {
   const router = useRouter();
   const insets = useSafeAreaInsets();

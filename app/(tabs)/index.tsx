@@ -207,7 +207,16 @@ function DueSoonCard({ sub }: { sub: Subscription }) {
   );
 }
 
-// ─── Home screen ──────────────────────────────────────────────────────────────
+/**
+ * Render the home screen with a greeting, key subscription stats, upcoming renewals, and a spending breakdown.
+ *
+ * The component displays the user's display name, total monthly spend, active subscription count, and a month-over-month
+ * change string (e.g. "+3.4%") or `null`/em dash when insufficient data or previous total is zero. It shows up to five
+ * future renewals sorted by date under "Due Soon". The spending overview presents a donut chart built from the top
+ * three categories (remaining categories are aggregated as "Other").
+ *
+ * @returns A JSX element representing the app's home screen.
+ */
 
 export default function HomeScreen() {
   const { user } = useUser();

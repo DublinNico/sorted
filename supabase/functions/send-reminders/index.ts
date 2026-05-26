@@ -17,7 +17,22 @@ interface PushMessage {
   priority?: "high";
 }
 
-// deno-lint-ignore no-explicit-any
+/**
+ * Send scheduled Expo push reminders for users who enabled notifications.
+ *
+ * Fetches enabled notification preferences, finds active subscriptions whose
+ * renewal dates match each user's reminder offsets, collects user push tokens,
+ * builds Expo push messages, sends them in batches, and returns the count of
+ * tickets accepted by Expo.
+ *
+ * @param req - Incoming HTTP request (must include `Authorization: Bearer ${SUPABASE_SERVICE_ROLE_KEY}`)
+ * @param supabaseOverride - Optional Supabase client instance to use instead of constructing one from environment (useful for testing)
+ * @returns A JSON `Response` with body `{ sent: number }` where `sent` is the number of push tickets whose `status` was `"ok"`.
+ *
+ * Possible responses:
+ * - `401 Unauthorized` if the request is not authorized with the Supabase service role key.
+ * - `500` if fetching notification preferences from the database fails.
+ */
 export async function handler(req: Request, supabaseOverride?: any): Promise<Response> {
   // Auth: only allow calls from Supabase itself (pg_cron HTTP or dashboard invoke).
   const authHeader = req.headers.get("Authorization");

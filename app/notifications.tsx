@@ -27,7 +27,14 @@ const DAYS_OPTIONS = [
   { value: 7, label: "7 days before" },
 ];
 
-// ─── Screen ───────────────────────────────────────────────────────────────────
+/**
+ * Screen for viewing and editing the user's push notification preferences.
+ *
+ * Loads preferences from Supabase on mount, requests notification permissions when enabling push,
+ * and saves updates with a short debounce to avoid rapid network calls.
+ *
+ * @returns A JSX element rendering the Notifications screen
+ */
 
 export default function NotificationsScreen() {
   const router = useRouter();

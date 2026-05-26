@@ -24,7 +24,12 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-// ─── Section header ───────────────────────────────────────────────────────────
+/**
+ * Renders a small, styled section label used to separate UI sections.
+ *
+ * @param title - The text content to display inside the section label
+ * @returns The rendered Text element styled as a section header
+ */
 
 function SectionHeader({ title }: { title: string }) {
   return (
@@ -43,7 +48,16 @@ function SectionHeader({ title }: { title: string }) {
   );
 }
 
-// ─── Password input ───────────────────────────────────────────────────────────
+/**
+ * Renders a labeled password input with a leading icon and a visibility toggle.
+ *
+ * @param label - Text displayed above the input as the field label
+ * @param value - Current input value
+ * @param onChangeText - Callback invoked with the updated text when the input changes
+ * @param placeholder - Placeholder text shown when the input is empty
+ * @param icon - Name of the Ionicons icon shown at the start of the input row
+ * @returns The rendered password input element
+ */
 
 function PasswordInput({
   label,
@@ -106,7 +120,17 @@ function PasswordInput({
   );
 }
 
-// ─── Security option row ──────────────────────────────────────────────────────
+/**
+ * Renders a labeled security option row with a leading icon and a trailing switch.
+ *
+ * @param icon - Name of the Ionicons glyph to display in the leading square
+ * @param title - Primary label shown to the user
+ * @param description - Secondary descriptive text shown below the title
+ * @param value - Current boolean state of the switch
+ * @param onValueChange - Callback invoked with the new boolean value when the switch is toggled
+ * @param testID - Optional test identifier forwarded to the underlying Switch
+ * @returns A React element representing the security option row
+ */
 
 function SecurityRow({
   icon,
@@ -167,7 +191,15 @@ function SecurityRow({
   );
 }
 
-// ─── Screen ───────────────────────────────────────────────────────────────────
+/**
+ * Render the Security screen with controls for changing the password and managing security options.
+ *
+ * Manages local state for current/new passwords, biometric availability and enablement, and handles
+ * updating the user's password, toggling biometric login (with device support and biometric
+ * confirmation), and displaying related alerts and status.
+ *
+ * @returns The Security screen's UI as a JSX element.
+ */
 
 export default function SecurityScreen() {
   const router = useRouter();

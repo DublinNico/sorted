@@ -71,6 +71,17 @@ function ScreenTracker() {
   return null;
 }
 
+/**
+ * Loads and persists user-specific data into the subscriptions store when a user is signed in.
+ *
+ * While mounted and signed in, triggers setup of the Android notification channel, fetches
+ * subscriptions, the device push token, and monthly snapshots in parallel, then updates the
+ * subscriptions store with the fetched subscriptions and snapshots. If a push token is available
+ * it is upserted; the current month's total is computed from subscription prices and upserted as a
+ * monthly snapshot. Errors are logged to the console; loading state is set while the operation runs.
+ *
+ * @returns Null (renders nothing)
+ */
 function DataLoader() {
   const { isSignedIn, userId } = useAuth();
   const supabase = useSupabase();
@@ -116,6 +127,19 @@ function DataLoader() {
   return null;
 }
 
+/**
+ * Render the app's initial layout and perform sign-in based routing.
+ *
+ * Performs client-side redirects once authentication state is loaded:
+ * - If the first segment is `"splash-preview"`, no redirect is performed.
+ * - If the user is signed in and the current segment group is `(auth)`, replaces the route with `/(tabs)`.
+ * - If the user is not signed in and not in the `(auth)` group, replaces the route with `/(auth)/sign-in`.
+ *
+ * While auth state is still loading, renders the app splash screen. When loaded, provides the themed
+ * navigation stack with header hidden, animations disabled, and the app background color applied.
+ *
+ * @returns The root layout element containing the themed navigation stack or the splash screen while loading.
+ */
 function InitialLayout() {
   const { isSignedIn, isLoaded } = useAuth();
   const segments = useSegments();
@@ -153,6 +177,13 @@ function InitialLayout() {
   );
 }
 
+/**
+ * Application root layout that ensures fonts and a minimum 2-second splash are ready, then mounts global providers and app-level loaders.
+ *
+ * While mounting, it waits for required fonts to load and enforces a 2-second minimum splash delay; once ready it hides the native splash and renders analytics, authentication, and navigation providers along with screen-tracking and data-loading helpers.
+ *
+ * @returns The root React element tree containing PostHog and Clerk providers, plus ScreenTracker, DataLoader, and InitialLayout components.
+ */
 export default function RootLayout() {
   const [fontsLoaded] = useFonts({
     "sans-regular":   require("../assets/assets/fonts/PlusJakartaSans-Regular.ttf"),

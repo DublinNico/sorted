@@ -18,7 +18,12 @@ interface SubscriptionRow {
   color: string;
 }
 
-// ─── Converters ───────────────────────────────────────────────────────────────
+/**
+ * Convert a database `subscriptions` row into a `Subscription` object for application use.
+ *
+ * @param row - The raw `SubscriptionRow` from the database
+ * @returns A `Subscription` with `startDate` and `renewalDate` mapped from `start_date`/`renewal_date` and `icon` set to `{ uri: icon_url }`
+ */
 
 export function rowToSubscription(row: SubscriptionRow): Subscription {
   return {
@@ -37,6 +42,14 @@ export function rowToSubscription(row: SubscriptionRow): Subscription {
   };
 }
 
+/**
+ * Convert a Subscription object into a Supabase `subscriptions` table row payload.
+ *
+ * @param sub - Subscription object without `id`; when `sub.icon` is an object its `uri` will be extracted
+ * @param userId - Owner user ID to assign to the `user_id` field
+ * @param id - Optional row `id` to include in the returned payload
+ * @returns An object shaped for the `subscriptions` table: field names are mapped, `icon.uri` is stored as `icon_url`, and defaults are applied for `currency` (`"EUR"`), `frequency` (falls back to `billing`), `category` (`"Other"`), `status` (`"active"`), `start_date`/`renewal_date` (current ISO timestamp when missing), and `color` (`"#C9A84C"`). The `id` property is present only if `id` was provided.
+ */
 export function subscriptionToRow(
   sub: Omit<Subscription, "id">,
   userId: string,

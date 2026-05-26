@@ -30,6 +30,15 @@ const inputStyle = (hasError?: boolean) => ({
   color: colors.primary,
 } as const);
 
+/**
+ * Render the sign-up screen with both the registration form and the email verification flow.
+ *
+ * Renders a registration form that collects full name, email, password, and confirmation, performs client-side validation,
+ * creates a Clerk sign-up, and sends a verification code. When the sign-up requires email verification it renders a
+ * verification UI allowing the user to enter or resend the 6-digit code and finalize the sign-up.
+ *
+ * @returns A React element that displays either the registration form or the email verification UI based on Clerk sign-up state.
+ */
 export default function SignUp() {
   const { signUp, errors, fetchStatus } = useSignUp();
 

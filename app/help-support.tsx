@@ -58,7 +58,12 @@ const FAQ_ITEMS: FaqItem[] = [
   },
 ];
 
-// ─── Section header ───────────────────────────────────────────────────────────
+/**
+ * Renders a styled section header label.
+ *
+ * @param title - The text to display as the section header
+ * @returns A React element containing the header text with muted styling and spacing
+ */
 
 function SectionHeader({ title }: { title: string }) {
   return (
@@ -77,7 +82,12 @@ function SectionHeader({ title }: { title: string }) {
   );
 }
 
-// ─── Contact row ──────────────────────────────────────────────────────────────
+/**
+ * Render a touchable contact option row for the Help & Support screen.
+ *
+ * @param option - ContactOption describing the row's icon, title, subtitle, action handler, trailing icon and optional `disabled` flag
+ * @returns A React element for the contact row; when `option.disabled` the row is non-interactive and visually dimmed
+ */
 
 function ContactRow({ option }: { option: ContactOption }) {
   return (
@@ -123,7 +133,12 @@ function ContactRow({ option }: { option: ContactOption }) {
   );
 }
 
-// ─── FAQ item ─────────────────────────────────────────────────────────────────
+/**
+ * Renders a card-like row displaying an FAQ question and its answer.
+ *
+ * @param item - The FAQ entry to render, containing `question` and `answer` strings.
+ * @returns A React element containing the formatted FAQ question and answer.
+ */
 
 function FaqRow({ item }: { item: FaqItem }) {
   return (
@@ -146,7 +161,11 @@ function FaqRow({ item }: { item: FaqItem }) {
   );
 }
 
-// ─── Screen ───────────────────────────────────────────────────────────────────
+/**
+ * Render the Help & Support screen containing contact options, frequently asked questions, and footer links.
+ *
+ * @returns The rendered React element for the Help & Support screen
+ */
 
 export default function HelpSupportScreen() {
   const router     = useRouter();
