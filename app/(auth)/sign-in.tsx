@@ -189,7 +189,7 @@ function ForgotPasswordScreen({
         password: newPassword,
       });
       if (result.status === "complete") {
-        await signIn.finalize();
+        await finalize();
       } else {
         setError("Reset incomplete. Please try again.");
       }

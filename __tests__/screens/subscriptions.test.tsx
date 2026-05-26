@@ -35,7 +35,9 @@ jest.mock("@/services/subscriptions", () => ({
 jest.mock("@/components/SubscriptionCard", () => {
   const React = require("react");
   const { Text } = require("react-native");
-  return ({ name }: any) => React.createElement(Text, null, name);
+  const MockSubscriptionCard = ({ name }: any) => React.createElement(Text, null, name);
+  MockSubscriptionCard.displayName = "SubscriptionCard";
+  return MockSubscriptionCard;
 });
 
 jest.mock("@/components/CreateSubscriptionModal", () => () => null);
