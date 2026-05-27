@@ -31,6 +31,7 @@
 
 import "@/global.css";
 import CalendarPicker from "@/components/CalendarPicker";
+import { icons } from "@/constants/icons";
 import { colors } from "@/constants/theme";
 import { getDomain } from "@/utils/domainUtils";
 import { Ionicons } from "@expo/vector-icons";
@@ -39,6 +40,7 @@ import dayjs from "dayjs";
 import { usePostHog } from "posthog-react-native";
 import React, { useEffect, useState } from "react";
 import {
+  Image,
   KeyboardAvoidingView,
   Modal,
   Platform,
@@ -209,13 +211,18 @@ const CreateSubscriptionModal = ({
   const [showTypeDropdown, setShowTypeDropdown] = useState(false);
   const [name,             setName]             = useState("");
   const [price,            setPrice]            = useState("");
-  const [billing,          setBilling]          = useState<"Weekly" | "Monthly" | "Yearly">("Monthly");
+  const [billing,          setBilling]          = useState<"Weekly" | "Monthly" | "Yearly" | "One-off">("Monthly");
   const [showBillingDrop,  setShowBillingDrop]  = useState(false);
   const [nextPaymentDate,  setNextPaymentDate]  = useState("");
   const [showCalendar,     setShowCalendar]     = useState(false);
 
   const posthog     = usePostHog();
   const parsedPrice = parseFloat(price);
+
+  const [previewImgError, setPreviewImgError] = useState(false);
+  const previewDomain = getDomain(name.trim());
+
+  useEffect(() => { setPreviewImgError(false); }, [previewDomain]);
 
   /** True when name is filled and price is a positive number. */
   const isValid = name.trim().length > 0 && !isNaN(parsedPrice) && parsedPrice > 0;
@@ -226,8 +233,8 @@ const CreateSubscriptionModal = ({
     if (visible && initialData) {
       setName(initialData.name ?? "");
       setPrice(initialData.price.toString());
-      const b = initialData.billing as "Weekly" | "Monthly" | "Yearly";
-      setBilling(["Weekly", "Monthly", "Yearly"].includes(b) ? b : "Monthly");
+      const b = initialData.billing as "Weekly" | "Monthly" | "Yearly" | "One-off";
+      setBilling(["Weekly", "Monthly", "Yearly", "One-off"].includes(b) ? b : "Monthly");
       if (initialData.renewalDate) {
         setNextPaymentDate(dayjs(initialData.renewalDate).format("DD/MM/YYYY"));
       }
@@ -267,6 +274,7 @@ const CreateSubscriptionModal = ({
       const parsed = dayjs(`${parts[2]}-${parts[1]}-${parts[0]}`);
       if (parsed.isValid()) return parsed;
     }
+    if (billing === "One-off") return dayjs();
     return billing === "Weekly"
       ? dayjs().add(1, "week")
       : billing === "Monthly"
@@ -329,7 +337,7 @@ const CreateSubscriptionModal = ({
       billing,
       frequency: billing,
       category,
-      status:    initialData?.status ?? "active",
+      status:    initialData?.status ?? (billing === "One-off" ? "unpaid" : "active"),
       startDate,
       renewalDate,
       color:     initialData?.color ?? getColorFromName(trimmedName),
@@ -445,9 +453,32 @@ const CreateSubscriptionModal = ({
             {/*
              * Specific provider or service name (e.g. "Spotify", "ESB", "Rent").
              * Drives getDomain() → logos-api icon URI lookup.
+             * A live logo preview appears to the right of the label as soon as
+             * the user types a name.
              */}
             <View className="auth-field">
-              <Text className="auth-label">Name</Text>
+              <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+                <Text className="auth-label">Name</Text>
+                {name.trim().length > 0 && (
+                  <View
+                    testID="logo-preview"
+                    style={{
+                      width: 36,
+                      height: 36,
+                      borderRadius: 10,
+                      backgroundColor: getColorFromName(name.trim()) + "33",
+                      overflow: "hidden",
+                    }}
+                  >
+                    <Image
+                      source={previewImgError ? icons.wallet : { uri: `https://logos-api.apistemic.com/domain:${previewDomain}` }}
+                      style={{ width: 36, height: 36 }}
+                      resizeMode="contain"
+                      onError={() => setPreviewImgError(true)}
+                    />
+                  </View>
+                )}
+              </View>
               <TextInput
                 testID="subscription-name-input"
                 className="auth-input"
@@ -504,7 +535,7 @@ const CreateSubscriptionModal = ({
               {/* Inline options list */}
               {showBillingDrop && (
                 <View style={{ backgroundColor: colors.background, borderRadius: 14, borderWidth: 1, borderColor: colors.accent, overflow: "hidden", marginTop: 4 }}>
-                  {(["Weekly", "Monthly", "Yearly"] as const).map((opt, index) => (
+                  {(["Weekly", "Monthly", "Yearly", "One-off"] as const).map((opt, index) => (
                     <TouchableOpacity
                       key={opt}
                       onPress={() => { setBilling(opt); setShowBillingDrop(false); }}
@@ -526,14 +557,15 @@ const CreateSubscriptionModal = ({
               )}
             </View>
 
-            {/* ── Next Payment Date ─────────────────────────────────────────── */}
+            {/* ── Next Payment / Due Date ───────────────────────────────────── */}
             {/*
              * Text input auto-formats to dd/mm/yyyy as the user types.
              * Tapping the calendar icon opens the CalendarPicker popup modal.
-             * If left blank, renewalDate falls back to today + 1 billing period.
+             * For One-off bills the label reads "Due Date" and the fallback is today.
+             * For recurring bills the fallback is today + 1 billing period.
              */}
             <View className="auth-field">
-              <Text className="auth-label">Next Payment Date</Text>
+              <Text className="auth-label">{billing === "One-off" ? "Due Date" : "Next Payment Date"}</Text>
               <View style={{ position: "relative" }}>
                 <TextInput
                   className="auth-input"

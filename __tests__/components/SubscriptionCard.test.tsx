@@ -119,3 +119,64 @@ describe("SubscriptionCard — expanded state", () => {
     expect(onEditPress).toHaveBeenCalledTimes(1);
   });
 });
+
+describe("SubscriptionCard — One-off billing", () => {
+  const oneOffBase: SubscriptionCardProps = {
+    ...baseProps,
+    billing: "One-off",
+    status:  "unpaid",
+    onMarkPaid: jest.fn(),
+  };
+
+  // One-off unpaid bills must show an "Unpaid" badge instead of a billing
+  // frequency string so the user can immediately see outstanding bills.
+  it("renders Unpaid badge for an unpaid one-off bill", () => {
+    const { getByText } = render(<SubscriptionCard {...oneOffBase} />);
+    expect(getByText("Unpaid")).toBeTruthy();
+  });
+
+  // Once a one-off bill is paid the badge must switch to "Paid" so the
+  // user knows the obligation has been settled.
+  it("renders Paid badge for a paid one-off bill", () => {
+    const { getByText } = render(
+      <SubscriptionCard {...oneOffBase} status="paid" />
+    );
+    expect(getByText("Paid")).toBeTruthy();
+  });
+
+  // The billing frequency string (e.g. "Monthly") must not appear for one-off
+  // bills — the badge replaces it.
+  it("does not render the billing frequency text for one-off bills", () => {
+    const { queryByText } = render(<SubscriptionCard {...oneOffBase} />);
+    expect(queryByText("One-off")).toBeNull();
+  });
+
+  // The Mark as Paid button must only appear for unpaid one-off bills in the
+  // expanded state so the user can settle them from the list.
+  it("renders Mark as Paid button when expanded and unpaid", () => {
+    const { getByText } = render(
+      <SubscriptionCard {...oneOffBase} expanded={true} />
+    );
+    expect(getByText("Mark as Paid")).toBeTruthy();
+  });
+
+  // Pressing Mark as Paid must call onMarkPaid so the parent screen can
+  // update the status in the store and persist it to Supabase.
+  it("calls onMarkPaid when Mark as Paid is pressed", () => {
+    const onMarkPaid = jest.fn();
+    const { getByText } = render(
+      <SubscriptionCard {...oneOffBase} expanded={true} onMarkPaid={onMarkPaid} />
+    );
+    fireEvent.press(getByText("Mark as Paid"));
+    expect(onMarkPaid).toHaveBeenCalledTimes(1);
+  });
+
+  // Mark as Paid must NOT appear for already-paid one-off bills — the action
+  // is irreversible so there is nothing to do once settled.
+  it("does not render Mark as Paid when bill is already paid", () => {
+    const { queryByText } = render(
+      <SubscriptionCard {...oneOffBase} expanded={true} status="paid" />
+    );
+    expect(queryByText("Mark as Paid")).toBeNull();
+  });
+});

@@ -15,6 +15,7 @@ interface PushMessage {
   data?: Record<string, unknown>;
   sound?: "default";
   priority?: "high";
+  channelId?: string;
 }
 
 // deno-lint-ignore no-explicit-any
@@ -84,22 +85,40 @@ export async function handler(req: Request, supabaseOverride?: any): Promise<Res
 
     if (!tokenRows || tokenRows.length === 0) continue;
 
+    // Group by daysLeft so each day-bucket gets one combined notification.
+    const byDay = new Map<number, typeof subs>();
     for (const sub of subs) {
       const renewalDate = new Date(sub.renewal_date);
       const daysLeft = Math.round(
         (renewalDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)
       );
+      if (!byDay.has(daysLeft)) byDay.set(daysLeft, []);
+      byDay.get(daysLeft)!.push(sub);
+    }
+
+    for (const [daysLeft, group] of byDay) {
       const label = daysLeft === 0 ? "today" : daysLeft === 1 ? "tomorrow" : `in ${daysLeft} days`;
-      const amount = `${sub.currency ?? "EUR"} ${Number(sub.price).toFixed(2)}`;
+      const total = group.reduce((sum, s) => sum + Number(s.price), 0);
+      const currency = group[0].currency ?? "EUR";
+
+      const title = group.length === 1
+        ? `${group[0].name} due ${label}`
+        : `${group.length} payments due ${label}`;
+
+      const body = group.length === 1
+        ? `${currency} ${total.toFixed(2)} will be charged ${label}.`
+        : group.map((s) => `${s.name} — ${currency} ${Number(s.price).toFixed(2)}`).join("\n") +
+          `\nTotal: ${currency} ${total.toFixed(2)}`;
 
       for (const { token } of tokenRows) {
         messages.push({
           to: token,
-          title: `${sub.name} due ${label}`,
-          body: `${amount} will be charged ${label}.`,
-          data: { subscriptionId: sub.id },
+          title,
+          body,
+          data: { daysLeft },
           sound: "default",
           priority: "high",
+          channelId: "payment-reminders",
         });
       }
     }

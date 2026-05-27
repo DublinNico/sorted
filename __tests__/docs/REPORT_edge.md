@@ -287,12 +287,12 @@ A total of **4 tests** were implemented in 1 test file covering the `send-remind
 
 | Report | Tests | Files |
 |---|---|---|
-| Unit + Integration (`REPORT_unit.md`) | 134 | 11 |
-| Component (`REPORT_components.md`) | 27 | 5 |
-| Screen (`REPORT_screens.md`) | 56 | 6 |
+| Unit + Integration (`REPORT_unit.md`) | 127 | 11 |
+| Component (`REPORT_components.md`) | 35 | 5 |
+| Screen (`REPORT_screens.md`) | 122 | 11 |
 | E2E — Detox (`REPORT_e2e.md`) | 13 | 4 |
 | Edge Function — Deno (this report) | 4 | 1 |
-| **Total** | **234** | **27** |
+| **Total** | **301** | **32** |
 
 ---
 

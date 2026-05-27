@@ -88,20 +88,21 @@ function DataLoader() {
       setLoading(true);
       try {
         await setupAndroidChannel();
-        const [subs, token, snapshots] = await Promise.all([
+        const [subs, token] = await Promise.all([
           fetchSubscriptions(supabase, userId),
           getExpoPushToken(),
-          fetchMonthlySnapshots(supabase, userId),
         ]);
         if (cancelled) return;
         setSubscriptions(subs);
-        setMonthlySnapshots(snapshots);
         if (token) {
           upsertPushToken(supabase, userId, token).catch(console.error);
         }
         const now = new Date();
         const total = subs.reduce((sum, s) => sum + s.price, 0);
         upsertMonthlySnapshot(supabase, userId, now.getFullYear(), now.getMonth() + 1, total).catch(console.error);
+        fetchMonthlySnapshots(supabase, userId)
+          .then((snapshots) => { if (!cancelled) setMonthlySnapshots(snapshots); })
+          .catch(console.error);
       } catch (err) {
         console.error("DataLoader error:", err);
       } finally {

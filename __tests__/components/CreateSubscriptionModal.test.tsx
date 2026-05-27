@@ -139,4 +139,24 @@ describe("CreateSubscriptionModal", () => {
     );
     expect(getByText("Edit Payment")).toBeTruthy();
   });
+
+  // The logo preview must not be visible when the name field is empty so the
+  // UI does not make a pointless network request on first render.
+  it("does not show logo preview when name is empty", () => {
+    const { queryByTestId } = render(<CreateSubscriptionModal {...baseProps} />);
+    expect(queryByTestId("logo-preview")).toBeNull();
+  });
+
+  // As soon as the user types a name the logo preview container must appear
+  // so they get immediate visual feedback before submitting the form.
+  it("shows logo preview when name is typed", () => {
+    const { getByTestId, getByPlaceholderText } = render(
+      <CreateSubscriptionModal {...baseProps} />
+    );
+    fireEvent.changeText(
+      getByPlaceholderText("e.g., Spotify, Electricity, Rent"),
+      "Netflix"
+    );
+    expect(getByTestId("logo-preview")).toBeTruthy();
+  });
 });

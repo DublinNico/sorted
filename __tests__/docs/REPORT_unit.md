@@ -89,8 +89,8 @@ The strategy is structured in layers:
 |---|---|---|
 | Unit testing | Automated — Jest | Implemented |
 | Integration testing | Automated — Jest with Supabase mock client | Implemented |
-| Component testing | Automated — React Native Testing Library | Planned |
-| System / E2E testing | Manual — on-device testing via Expo Go | Planned |
+| Component testing | Automated — React Native Testing Library | Implemented |
+| System / E2E testing | Automated — Detox on Android emulator | Implemented |
 | Acceptance testing | Manual — stakeholder walkthrough | Planned |
 
 This report covers the **unit testing** and **integration testing** layers in full.
@@ -758,9 +758,8 @@ The automated suite runs in approximately 13 seconds and can be re-run with `npm
 - Notification tests confirm the iOS/Android platform guard in `setupAndroidChannel` and the error-catch fallback in `getExpoPushToken` that prevents the app from crashing when running in Expo Go without an EAS project ID.
 
 **Remaining gaps in coverage:**
-- React Native UI components (screens, modals) are not covered — a component testing layer using React Native Testing Library is required.
-- Clerk authentication flows (sign in, sign up, forgot password) are not covered — these require an emulated Clerk environment or E2E tooling.
-- End-to-end user journeys are not covered — require Detox or Maestro on a real device or simulator.
+- Clerk authentication flows at the network level are not covered by unit tests — these require a live Clerk environment and are exercised by E2E tests (see `REPORT_e2e.md`).
+- The `send-reminders` edge function `messages.length === 0` early-return branch and chunking loop are not yet tested (see `REPORT_edge.md` Section 6.2).
 
 ---
 
@@ -780,9 +779,9 @@ The automated suite runs in approximately 13 seconds and can be re-run with `npm
 
 1. ~~**Add integration tests for Supabase service functions**~~ — **Completed.** All four subscription service functions, both push token functions, and both notification prefs functions are now covered by mock-client integration tests.
 
-2. **Add component tests using React Native Testing Library** for the highest-risk screens: `CreateSubscriptionModal` (form validation logic), `sign-in.tsx` (biometric flow), and the home dashboard (data aggregation).
+2. ~~**Add component tests using React Native Testing Library**~~ — **Completed.** Five components (`CreateSubscriptionModal`, `SubscriptionCard`, `CalendarPicker`, `UpcommingSubscriptionCard`, `ListHeading`) are covered across 35 tests in `REPORT_components.md`.
 
-3. **Add end-to-end tests** using Detox or Maestro for the critical user journey: sign in → add subscription → verify on home screen → delete subscription → verify removed.
+3. ~~**Add end-to-end tests**~~ — **Completed.** 13 E2E test cases are written using Detox 20 targeting the `Medium_Phone_API_35` Android emulator. See `REPORT_e2e.md`.
 
 4. **Increase coverage of `formatCurrency`** by adding a test that forces the `catch` fallback (passing an invalid currency code) to verify the manual symbol lookup behaves correctly.
 

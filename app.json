@@ -58,6 +58,13 @@
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
-    }
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "84643034-05dc-411b-b046-cf8b3b04a59f"
+      }
+    },
+    "owner": "dublinnico"
   }
 }
