@@ -283,7 +283,7 @@ ok | 4 passed | 0 failed (12ms)
 
 ### 6.1 Summary of Testing
 
-A total of **4 tests** were implemented in 1 test file covering the `send-reminders` Supabase edge function. All 4 tests pass. The full test suite across all layers now stands at **234 tests across 27 files**.
+A total of **4 tests** were implemented in 1 test file covering the `send-reminders` Supabase edge function. All 4 tests pass. The full test suite across all layers now stands at **301 tests across 32 files**.
 
 | Report | Tests | Files |
 |---|---|---|

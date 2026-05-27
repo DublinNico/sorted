@@ -17,7 +17,7 @@
  */
 
 import { icons } from "@/constants/icons";
-import { colors } from "@/constants/theme";
+import { colors, withOpacity } from "@/constants/theme";
 import {
   formatCurrency,
   formatStatusLabel,
@@ -195,14 +195,14 @@ const SubscriptionCard = ({
                 paddingHorizontal: 8,
                 paddingVertical: 2,
                 borderRadius: 999,
-                backgroundColor: status === "paid" ? "#22c55e33" : "#f9731633",
+                backgroundColor: status === "paid" ? withOpacity(colors.successBright, 0.2) : withOpacity(colors.warning, 0.2),
               }}
             >
               <Text
                 style={{
                   fontSize: 11,
                   fontFamily: "sans-semibold",
-                  color: status === "paid" ? "#22c55e" : "#f97316",
+                  color: status === "paid" ? colors.successBright : colors.warning,
                 }}
               >
                 {status === "paid" ? "Paid" : "Unpaid"}
@@ -278,13 +278,13 @@ const SubscriptionCard = ({
               activeOpacity={0.8}
               style={{
                 marginTop: 6,
-                backgroundColor: "#22c55e",
+                backgroundColor: colors.successBright,
                 borderRadius: 24,
                 paddingVertical: 14,
                 alignItems: "center",
               }}
             >
-              <Text style={{ fontSize: 16, color: "#fff", fontFamily: "sans-bold" }}>
+              <Text style={{ fontSize: 16, color: colors.foreground, fontFamily: "sans-bold" }}>
                 Mark as Paid
               </Text>
             </TouchableOpacity>

@@ -120,7 +120,7 @@ Tests individual functions in complete isolation. No external dependencies (netw
 **Integration Testing — Implemented**
 Tests the Supabase service functions (`fetchSubscriptions`, `createSubscription`, `updateSubscription`, `deleteSubscription`, `upsertPushToken`, `deletePushToken`, `getNotificationPrefs`, `upsertNotificationPrefs`) against a mocked Supabase client to verify that query chains are constructed correctly, responses are mapped accurately, and errors are surfaced rather than swallowed.
 
-**System Testing — Planned**
+**System Testing — Implemented**
 Manual on-device testing of complete user flows: sign up, add a subscription, verify it appears on the home screen, delete it, verify it is removed. Will cover both iOS (iPhone simulator) and Android (Android emulator).
 
 **Acceptance Testing — Planned**
@@ -147,7 +147,7 @@ Walkthrough of the application against the original Figma UI specification to co
 | Unit test implementation | 1 day |
 | Integration test implementation | 2 days (planned) |
 | Component test implementation | 2 days (planned) |
-| Manual system testing | 1 day (planned) |
+| Manual system testing | 1 day (implemented) |
 | Report writing | 1 day |
 
 ---

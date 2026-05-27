@@ -97,7 +97,7 @@ const SpendingTrendChart = ({ data }: { data: TrendBar[] }) => {
           })
         )
       ).start();
-    }, [])
+    }, [data, animValues])
   );
 
   const totalW = 12 * COL_W;

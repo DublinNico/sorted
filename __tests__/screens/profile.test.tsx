@@ -78,19 +78,24 @@ describe("Profile screen — rendering", () => {
   });
 
   it("shows '—' when createdAt is not available", () => {
-    jest.mock("@clerk/expo", () => ({
-      useUser: () => ({
-        user: {
-          firstName: "Alice",
-          lastName: "Byrne",
-          emailAddresses: [{ emailAddress: "alice@example.com" }],
-          createdAt: null,
-          update: mockUpdate,
-        },
-      }),
-    }));
-    const { getByText } = render(<ProfileScreen />);
-    expect(getByText("Email")).toBeTruthy();
+    let IsolatedProfile!: React.ComponentType<any>;
+    jest.isolateModules(() => {
+      jest.doMock("@clerk/expo", () => ({
+        useUser: () => ({
+          user: {
+            firstName: "Alice",
+            lastName: "Byrne",
+            emailAddresses: [{ emailAddress: "alice@example.com" }],
+            createdAt: null,
+            update: mockUpdate,
+          },
+        }),
+      }));
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      IsolatedProfile = require("@/app/profile").default;
+    });
+    const { getByText } = render(<IsolatedProfile />);
+    expect(getByText("—")).toBeTruthy();
   });
 });
 

@@ -286,10 +286,10 @@ Display name ternary: `user.firstName || emailPrefix || "there"` — both the fi
 | `__tests__/screens/notifications.test.tsx` | `app/notifications.tsx` | 13 |
 | `__tests__/screens/settings.test.tsx` | `app/(tabs)/settings.tsx` | 13 |
 | `__tests__/screens/security.test.tsx` | `app/security.tsx` | 11 |
-| `__tests__/screens/help-support.test.tsx` | `app/help-support.tsx` | 12 |
+| `__tests__/screens/help-support.test.tsx` | `app/help-support.tsx` | 11 |
 | `__tests__/screens/profile.test.tsx` | `app/profile.tsx` | 14 |
 | `__tests__/screens/payment-methods.test.tsx` | `app/payment-methods.tsx` | 13 |
-| **Total** | | **123** |
+| **Total** | | **122** |
 
 ---
 
@@ -390,7 +390,7 @@ jest.mock("expo-router", () => ({
 
 The following output was captured when running `npm test` (all 27 test files):
 
-```
+```text
 PASS __tests__/screens/sign-in.test.tsx
 PASS __tests__/screens/sign-up.test.tsx
 PASS __tests__/screens/home.test.tsx

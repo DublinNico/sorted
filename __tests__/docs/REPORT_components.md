@@ -335,7 +335,7 @@ Time:        ~11 s
 ```
 
 Full suite (all 27 files including unit, integration, and screen tests):
-```
+```text
 Test Suites: 27 passed, 27 total
 Tests:       284 passed, 284 total
 Time:        ~15 s

@@ -216,6 +216,6 @@ Run: `deno test --allow-env supabase/functions/send-reminders/index.test.ts`
 | Context | 1 | 0 | 0% |
 | Hooks | 1 | 0 | 0% |
 | Edge Function | 1 | 1 | 100% |
-| **Total** | **44** | **~28** | **~75%** |
+| **Total** | **44** | **27** | **~61%** |
 
-Priorities 1, 2, 3, 4, and 5 are complete. Coverage sits at approximately **75%**.
+Priorities 1, 2, 3, 4, and 5 are complete. Coverage sits at approximately **~61%**.

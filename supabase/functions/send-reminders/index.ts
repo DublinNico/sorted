@@ -98,17 +98,24 @@ export async function handler(req: Request, supabaseOverride?: any): Promise<Res
 
     for (const [daysLeft, group] of byDay) {
       const label = daysLeft === 0 ? "today" : daysLeft === 1 ? "tomorrow" : `in ${daysLeft} days`;
-      const total = group.reduce((sum, s) => sum + Number(s.price), 0);
-      const currency = group[0].currency ?? "EUR";
-
       const title = group.length === 1
         ? `${group[0].name} due ${label}`
         : `${group.length} payments due ${label}`;
 
-      const body = group.length === 1
-        ? `${currency} ${total.toFixed(2)} will be charged ${label}.`
-        : group.map((s) => `${s.name} — ${currency} ${Number(s.price).toFixed(2)}`).join("\n") +
-          `\nTotal: ${currency} ${total.toFixed(2)}`;
+      let body: string;
+      if (group.length === 1) {
+        const s = group[0];
+        const currency = s.currency ?? "EUR";
+        body = `${currency} ${Number(s.price).toFixed(2)} will be charged ${label}.`;
+      } else {
+        const lines = group.map((s) => `${s.name} — ${s.currency ?? "EUR"} ${Number(s.price).toFixed(2)}`);
+        const currencies = [...new Set(group.map((s) => s.currency ?? "EUR"))];
+        if (currencies.length === 1) {
+          const total = group.reduce((sum, s) => sum + Number(s.price), 0);
+          lines.push(`Total: ${currencies[0]} ${total.toFixed(2)}`);
+        }
+        body = lines.join("\n");
+      }
 
       for (const { token } of tokenRows) {
         messages.push({

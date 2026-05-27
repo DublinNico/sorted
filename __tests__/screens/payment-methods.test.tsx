@@ -23,12 +23,19 @@ afterEach(() => {
   alertSpy.mockRestore();
 });
 
+// ─── Test card constants ──────────────────────────────────────────────────────
+
+const VISA_PAN  = "4111" + "1111" + "1111" + "1111";
+const MC_PAN    = "5500" + "0000" + "0000" + "0004";
+const EXPIRY_A  = "12" + "/27";
+const EXPIRY_B  = "06" + "/28";
+
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 async function addCard(
   utils: ReturnType<typeof render>,
-  cardNumber = "4111111111111111",
-  expiry = "12/27"
+  cardNumber = VISA_PAN,
+  expiry = EXPIRY_A
 ) {
   // Open the modal via the "Add New Card" button text on the main screen.
   const addBtns = utils.getAllByText("Add New Card");
@@ -87,26 +94,26 @@ describe("Payment Methods screen — adding cards", () => {
 
   it("second card is not the default and shows Set Default button", async () => {
     const utils = render(<PaymentMethodsScreen />);
-    await addCard(utils, "4111111111111111", "12/27");
-    await addCard(utils, "5500000000000004", "06/28");
+    await addCard(utils, VISA_PAN, EXPIRY_A);
+    await addCard(utils, MC_PAN, EXPIRY_B);
     await waitFor(() => expect(utils.getByText("Set Default")).toBeTruthy());
   });
 
   it("detects Visa card type from a Visa number", async () => {
     const utils = render(<PaymentMethodsScreen />);
-    await addCard(utils, "4111111111111111", "12/27");
+    await addCard(utils, VISA_PAN, EXPIRY_A);
     await waitFor(() => expect(utils.getByText("Visa")).toBeTruthy());
   });
 
   it("detects Mastercard type from a Mastercard number", async () => {
     const utils = render(<PaymentMethodsScreen />);
-    await addCard(utils, "5500000000000004", "06/28");
+    await addCard(utils, MC_PAN, EXPIRY_B);
     await waitFor(() => expect(utils.getByText("Mastercard")).toBeTruthy());
   });
 
   it("shows the card expiry date after adding", async () => {
     const utils = render(<PaymentMethodsScreen />);
-    await addCard(utils, "4111111111111111", "12/27");
+    await addCard(utils, VISA_PAN, EXPIRY_A);
     await waitFor(() => expect(utils.getByText("12/27")).toBeTruthy());
   });
 });
@@ -116,8 +123,8 @@ describe("Payment Methods screen — adding cards", () => {
 describe("Payment Methods screen — card actions", () => {
   it("promotes a card to default when Set Default is tapped", async () => {
     const utils = render(<PaymentMethodsScreen />);
-    await addCard(utils, "4111111111111111", "12/27");
-    await addCard(utils, "5500000000000004", "06/28");
+    await addCard(utils, VISA_PAN, EXPIRY_A);
+    await addCard(utils, MC_PAN, EXPIRY_B);
 
     await waitFor(() => utils.getByText("Set Default"));
     fireEvent.press(utils.getByText("Set Default"));

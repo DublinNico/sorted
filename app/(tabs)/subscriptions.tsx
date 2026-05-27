@@ -275,11 +275,15 @@ const Subscriptions = () => {
                 )
               }
               onMarkPaid={() => {
+                const prev    = { ...item };
                 const updated = { ...item, status: "paid" };
                 updateSubscription(updated);
                 setExpandedId(null);
                 if (userId) {
-                  updateSubscriptionService(supabase, updated, userId).catch(console.error);
+                  updateSubscriptionService(supabase, updated, userId).catch((err) => {
+                    updateSubscription(prev);
+                    console.error(err);
+                  });
                 }
               }}
               onEditPress={() => {
