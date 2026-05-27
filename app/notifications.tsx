@@ -5,12 +5,15 @@ import {
   upsertNotificationPrefs,
 } from "@/services/notificationPrefs";
 import { requestPermissions } from "@/utils/notifications";
+import { useSubscriptionsStore } from "@/store/subscriptionsStore";
+import * as Notifications from "expo-notifications";
 import { useAuth } from "@clerk/expo";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
+  Alert,
   ScrollView,
   Switch,
   Text,
@@ -37,6 +40,7 @@ export default function NotificationsScreen() {
   const [pushEnabled, setPushEnabled] = useState(true);
   const [daysBefore, setDaysBefore] = useState<number[]>([1, 3, 7]);
   const [saving, setSaving] = useState(false);
+  const [isSendingTestNotification, setIsSendingTestNotification] = useState(false);
 
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -74,6 +78,52 @@ export default function NotificationsScreen() {
     }
     setPushEnabled(value);
     save(value, daysBefore);
+  };
+
+  const { subscriptions } = useSubscriptionsStore();
+
+  const sendTestNotification = async () => {
+    if (isSendingTestNotification) return;
+    const granted = await requestPermissions();
+    if (!granted) {
+      Alert.alert("Permission denied", "Enable notifications in your device settings.");
+      return;
+    }
+    if (subscriptions.length === 0) {
+      Alert.alert("No subscriptions", "Add a subscription first.");
+      return;
+    }
+    setIsSendingTestNotification(true);
+    try {
+      const failed: string[] = [];
+      for (let i = 0; i < subscriptions.length; i++) {
+        const sub = subscriptions[i];
+        try {
+          await Notifications.scheduleNotificationAsync({
+            content: {
+              title: `${sub.name} renews soon`,
+              body: `${sub.currency ?? "EUR"} ${Number(sub.price).toFixed(2)} will be charged.`,
+            },
+            trigger: {
+              type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL,
+              seconds: 3 + i * 2,
+            },
+          });
+        } catch {
+          failed.push(sub.name);
+        }
+      }
+      const scheduled = subscriptions.length - failed.length;
+      if (failed.length === 0) {
+        Alert.alert("Test sent", `${scheduled} notification${scheduled !== 1 ? "s" : ""} arriving in a few seconds.`);
+      } else if (scheduled > 0) {
+        Alert.alert("Partial success", `${scheduled} notification${scheduled !== 1 ? "s" : ""} scheduled. Failed: ${failed.join(", ")}.`);
+      } else {
+        Alert.alert("Failed", `Could not schedule notifications: ${failed.join(", ")}.`);
+      }
+    } finally {
+      setIsSendingTestNotification(false);
+    }
   };
 
   const handleDayToggle = (day: number) => {
@@ -252,6 +302,24 @@ export default function NotificationsScreen() {
         >
           Select how many days before a payment is due you want to be reminded.
         </Text>
+
+        {/* ── Test notification ─────────────────────────────────────────────── */}
+        <TouchableOpacity
+          onPress={sendTestNotification}
+          activeOpacity={0.75}
+          disabled={isSendingTestNotification}
+          style={{
+            marginTop: 32,
+            backgroundColor: colors.card,
+            borderRadius: 14,
+            paddingVertical: 16,
+            alignItems: "center",
+          }}
+        >
+          <Text style={{ fontSize: 15, color: colors.accent, fontFamily: "sans-semibold" }}>
+            Send Test Notification
+          </Text>
+        </TouchableOpacity>
       </ScrollView>
     </SafeAreaView>
   );

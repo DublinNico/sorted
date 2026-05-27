@@ -180,13 +180,12 @@ function DueSoonCard({ sub }: { sub: Subscription }) {
           height: 44,
           borderRadius: 12,
           backgroundColor: sub.color ? sub.color + "33" : colors.background,
-          alignItems: "center",
-          justifyContent: "center",
+          overflow: "hidden",
         }}
       >
         <Image
           source={imgError ? icons.wallet : sub.icon}
-          style={{ width: 28, height: 28, borderRadius: 6 }}
+          style={{ width: 44, height: 44 }}
           resizeMode="contain"
           onError={() => setImgError(true)}
         />
@@ -219,7 +218,9 @@ export default function HomeScreen() {
     user?.emailAddresses[0]?.emailAddress?.split("@")[0] ||
     "there";
 
-  const totalMonthly = subscriptions.reduce((sum, s) => sum + s.price, 0);
+  const totalMonthly = subscriptions
+    .filter((s) => s.billing !== "One-off")
+    .reduce((sum, s) => sum + s.price, 0);
 
   const now = Date.now();
   const activeCount = subscriptions.filter((s) => s.status !== "cancelled").length;

@@ -97,11 +97,15 @@ const Subscriptions = () => {
     });
   }, [subscriptions, query, selectedCategory]);
 
-  /**
-   * totalFiltered
-   * Sum of the prices of all currently visible subscriptions.
-   */
-  const totalFiltered = filtered.reduce((sum, s) => sum + s.price, 0);
+  /** Sum of recurring (non-one-off) visible subscriptions. */
+  const recurringTotal = filtered
+    .filter((s) => s.billing !== "One-off")
+    .reduce((sum, s) => sum + s.price, 0);
+
+  /** Sum of unpaid one-off bills in the current filter. */
+  const outstandingTotal = filtered
+    .filter((s) => s.billing === "One-off" && s.status === "unpaid")
+    .reduce((sum, s) => sum + s.price, 0);
 
   // ── Render ──────────────────────────────────────────────────────────────────
 
@@ -215,7 +219,7 @@ const Subscriptions = () => {
                 style={{
                   flexDirection: "row",
                   justifyContent: "space-between",
-                  alignItems: "center",
+                  alignItems: "flex-start",
                   marginBottom: 12,
                 }}
               >
@@ -230,16 +234,29 @@ const Subscriptions = () => {
                   {filtered.length} payment{filtered.length !== 1 ? "s" : ""}
                 </Text>
 
-                {/* Total cost of visible payments */}
-                <Text
-                  style={{
-                    fontSize: 14,
-                    color: colors.accent,
-                    fontFamily: "sans-semibold",
-                  }}
-                >
-                  {formatCurrency(totalFiltered)}/mo
-                </Text>
+                {/* Recurring total + optional outstanding line */}
+                <View style={{ alignItems: "flex-end", gap: 2 }}>
+                  <Text
+                    style={{
+                      fontSize: 14,
+                      color: colors.accent,
+                      fontFamily: "sans-semibold",
+                    }}
+                  >
+                    {formatCurrency(recurringTotal)}/mo
+                  </Text>
+                  {outstandingTotal > 0 && (
+                    <Text
+                      style={{
+                        fontSize: 12,
+                        color: "#f97316",
+                        fontFamily: "sans-medium",
+                      }}
+                    >
+                      {formatCurrency(outstandingTotal)} outstanding
+                    </Text>
+                  )}
+                </View>
               </View>
             </View>
           }
@@ -257,6 +274,18 @@ const Subscriptions = () => {
                   current === item.id ? null : item.id
                 )
               }
+              onMarkPaid={() => {
+                const prev    = { ...item };
+                const updated = { ...item, status: "paid" };
+                updateSubscription(updated);
+                setExpandedId(null);
+                if (userId) {
+                  updateSubscriptionService(supabase, updated, userId).catch((err) => {
+                    updateSubscription(prev);
+                    console.error(err);
+                  });
+                }
+              }}
               onEditPress={() => {
                 setEditingSubscription(item);
                 setExpandedId(null);

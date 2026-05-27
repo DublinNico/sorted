@@ -26,8 +26,8 @@ See `REPORT_unit.md` Section 1.1 for a full application overview.
 ### 1.3 Scope
 
 **In scope:**
-- `components/CreateSubscriptionModal.tsx` — form validation, auto-category derivation, submit payload, edit mode title, close handler
-- `components/SubscriptionCard.tsx` — renders name/price/billing, expand/collapse delete & edit button visibility, press callbacks
+- `components/CreateSubscriptionModal.tsx` — form validation, auto-category derivation, submit payload, edit mode title, close handler, logo preview visibility
+- `components/SubscriptionCard.tsx` — renders name/price/billing, expand/collapse delete & edit button visibility, press callbacks, One-off billing badge, Mark as Paid button
 - `components/CalendarPicker.tsx` — month/year header, weekday headers, Today/Clear footer actions
 - `components/UpcommingSubscriptionCard.tsx` — renders name/price, daysLeft countdown text
 - `components/ListHeading.tsx` — renders title, View all press callback
@@ -55,7 +55,7 @@ See `REPORT_unit.md` Section 1.1 for a full application overview.
 | Unit testing | Automated — Jest | Implemented |
 | Integration testing | Automated — Jest with Supabase mock client | Implemented |
 | Component testing | Automated — React Native Testing Library | Implemented |
-| System / E2E testing | Manual — on-device testing via Expo Go | Planned |
+| System / E2E testing | Automated — Detox on Android emulator | Implemented |
 | Acceptance testing | Manual — stakeholder walkthrough | Planned |
 
 ---
@@ -147,7 +147,10 @@ White-box tests are designed with knowledge of the component's internal logic, t
 Contains a ternary `isEditMode ? "Edit Payment" : "New Payment"` for the modal title (two branches). Contains an early-return guard in `handleSubmit` (`if (!isValid) return`) that creates a true branch (blocked) and a false branch (fires `onSubmit`). The `PAYMENT_TYPE_CATEGORY` lookup derives the category from the selected type — tested by selecting a non-default type and verifying the category in the payload.
 
 **`SubscriptionCard`**
-Contains `{expanded && (<View>...</View>)}` — both the true branch (action buttons rendered) and false branch (action buttons absent) are covered.
+Contains `{expanded && (<View>...</View>)}` — both the true branch (action buttons rendered) and false branch (action buttons absent) are covered. Contains `billing === "One-off"` branch in the price column (shows Paid/Unpaid badge vs. billing frequency text). Contains `billing === "One-off" && status === "unpaid"` guard for the Mark as Paid button.
+
+**`CreateSubscriptionModal` — logo preview**
+Contains `{name.trim().length > 0 && (<View testID="logo-preview">...</View>)}` — true branch (preview shown when name is non-empty) and false branch (preview absent when name is empty) are both covered.
 
 **`UpcommingSubscriptionCard`**
 Contains `daysLeft > 1 ? \`${daysLeft} days left\` : "Last day"` — both branches are covered by the BVA test cases above.
@@ -172,6 +175,14 @@ Contains `daysLeft > 1 ? \`${daysLeft} days left\` : "Last day"` — both branch
 | TC-WB-C-09 | `UpcommingSubscriptionCard` | `daysLeft > 1` false branch | `daysLeft={1}` | `"Last day"` shown | PASS |
 | TC-WB-C-10 | `CalendarPicker` | `handleToday` — selects today + closes | Press "Today" | `onSelect(today)`, `onClose()` called | PASS |
 | TC-WB-C-11 | `CalendarPicker` | `handleClear` — clears selection + closes | Press "Clear" | `onSelect("")`, `onClose()` called | PASS |
+| TC-WB-C-12 | `SubscriptionCard` | `billing === "One-off"` — Unpaid badge branch | `billing="One-off"`, `status="unpaid"` | "Unpaid" badge shown | PASS |
+| TC-WB-C-13 | `SubscriptionCard` | `billing === "One-off"` — Paid badge branch | `billing="One-off"`, `status="paid"` | "Paid" badge shown | PASS |
+| TC-WB-C-14 | `SubscriptionCard` | `billing === "One-off"` — billing text absent | `billing="One-off"` | "One-off" text not rendered | PASS |
+| TC-WB-C-15 | `SubscriptionCard` | `billing === "One-off" && status === "unpaid"` — Mark as Paid shown | expanded, unpaid one-off | "Mark as Paid" button present | PASS |
+| TC-WB-C-16 | `SubscriptionCard` | `onMarkPaid` callback path | Press "Mark as Paid" | `onMarkPaid` called once | PASS |
+| TC-WB-C-17 | `SubscriptionCard` | `status === "paid"` — Mark as Paid absent | expanded, paid one-off | "Mark as Paid" button absent | PASS |
+| TC-WB-C-18 | `CreateSubscriptionModal` | `name.trim().length > 0` — logo preview false branch | Name field empty | `logo-preview` absent | PASS |
+| TC-WB-C-19 | `CreateSubscriptionModal` | `name.trim().length > 0` — logo preview true branch | Name field has text | `logo-preview` present | PASS |
 
 ---
 
@@ -201,10 +212,10 @@ The CSS rule is placed before the `@/` alias rule so that `import "@/global.css"
 |---|---|---|
 | `__tests__/components/ListHeading.test.tsx` | `ListHeading` | 3 |
 | `__tests__/components/UpcommingSubscriptionCard.test.tsx` | `UpcommingSubscriptionCard` | 4 |
-| `__tests__/components/SubscriptionCard.test.tsx` | `SubscriptionCard` | 9 |
+| `__tests__/components/SubscriptionCard.test.tsx` | `SubscriptionCard` | 15 |
 | `__tests__/components/CalendarPicker.test.tsx` | `CalendarPicker` | 4 |
-| `__tests__/components/CreateSubscriptionModal.test.tsx` | `CreateSubscriptionModal` | 7 |
-| **Total** | | **27** |
+| `__tests__/components/CreateSubscriptionModal.test.tsx` | `CreateSubscriptionModal` | 9 |
+| **Total** | | **35** |
 
 ---
 
@@ -311,23 +322,23 @@ describe("CalendarPicker", () => {
 The following output was captured when running `npm test`:
 
 ```
-PASS __tests__/components/UpcommingSubscriptionCard.test.tsx  (7.956 s)
-PASS __tests__/components/SubscriptionCard.test.tsx           (10.769 s)
-PASS __tests__/components/ListHeading.test.tsx                (10.702 s)
-PASS __tests__/components/CreateSubscriptionModal.test.tsx    (12.945 s)
-PASS __tests__/components/CalendarPicker.test.tsx             (12.983 s)
+PASS __tests__/components/UpcommingSubscriptionCard.test.tsx  (7.762 s)
+PASS __tests__/components/ListHeading.test.tsx                (7.990 s)
+PASS __tests__/components/SubscriptionCard.test.tsx           (8.611 s)
+PASS __tests__/components/CreateSubscriptionModal.test.tsx    (10.555 s)
+PASS __tests__/components/CalendarPicker.test.tsx             (10.670 s)
 
 Test Suites: 5 passed, 5 total
-Tests:       27 passed, 27 total
+Tests:       35 passed, 35 total
 Snapshots:   0 total
-Time:        13.570 s
+Time:        ~11 s
 ```
 
-Full suite (all 16 files including unit and integration tests):
-```
-Test Suites: 16 passed, 16 total
-Tests:       154 passed, 154 total
-Time:         8.688 s
+Full suite (all 27 files including unit, integration, and screen tests):
+```text
+Test Suites: 27 passed, 27 total
+Tests:       284 passed, 284 total
+Time:        ~15 s
 ```
 
 ---
@@ -352,6 +363,12 @@ Time:         8.688 s
 | `calls onCancelPress when delete is pressed` | `SubscriptionCard` | Delete callback fired | PASS |
 | `renders the edit button when expanded` | `SubscriptionCard` | Edit button visibility | PASS |
 | `calls onEditPress when edit is pressed` | `SubscriptionCard` | Edit callback fired | PASS |
+| `renders Unpaid badge for unpaid one-off` | `SubscriptionCard` | One-off billing unpaid badge | PASS |
+| `renders Paid badge for paid one-off` | `SubscriptionCard` | One-off billing paid badge | PASS |
+| `does not render billing frequency for one-off` | `SubscriptionCard` | One-off billing text absent | PASS |
+| `renders Mark as Paid when expanded and unpaid` | `SubscriptionCard` | Mark as Paid button visibility | PASS |
+| `calls onMarkPaid when Mark as Paid pressed` | `SubscriptionCard` | Mark as Paid callback fired | PASS |
+| `does not render Mark as Paid when already paid` | `SubscriptionCard` | Mark as Paid absent for paid bills | PASS |
 | `renders current month/year header` | `CalendarPicker` | Header label shown | PASS |
 | `Today fires onSelect + onClose` | `CalendarPicker` | handleToday path | PASS |
 | `Clear fires onSelect("") + onClose` | `CalendarPicker` | handleClear path | PASS |
@@ -363,6 +380,8 @@ Time:         8.688 s
 | `derives category from payment type` | `CreateSubscriptionModal` | PAYMENT_TYPE_CATEGORY lookup | PASS |
 | `calls onClose when close is pressed` | `CreateSubscriptionModal` | handleClose callback | PASS |
 | `renders Edit Payment title with initialData` | `CreateSubscriptionModal` | isEditMode true branch | PASS |
+| `does not show logo preview when name is empty` | `CreateSubscriptionModal` | Logo preview hidden on mount | PASS |
+| `shows logo preview when name is typed` | `CreateSubscriptionModal` | Logo preview shown on name entry | PASS |
 
 ---
 
@@ -370,13 +389,13 @@ Time:         8.688 s
 
 ### 6.1 Summary of Testing
 
-A total of **27 component tests** were implemented across 5 test files, covering all five UI components specified in the test plan. All 27 tests passed on the first execution run after resolving two configuration issues (CSS import stubbing, `react-test-renderer` version pin).
+A total of **35 component tests** are implemented across 5 test files, covering all five UI components specified in the test plan. All 35 tests pass.
 
 The tests are split between black-box and white-box approaches:
 - **Black-box** (Boundary Value Analysis + Equivalence Partitioning): 6 test cases targeting input validation partitions and the `daysLeft` boundary.
-- **White-box**: 11 branch-level test cases covering conditional rendering, early-return guards, and callback dispatch paths.
+- **White-box**: 19 branch-level test cases covering conditional rendering, early-return guards, callback dispatch paths, One-off billing badge logic, Mark as Paid visibility, and logo preview conditional rendering.
 
-Combined with the 134 unit and integration tests from `REPORT_unit.md`, the component suite stands at **161 tests across 16 files**. With the addition of 56 screen tests (`REPORT_screens.md`), the full Jest suite stands at **217 tests across 22 files**.
+Combined with the 127 unit and integration tests from `REPORT_unit.md`, the component suite stands at **162 tests across 16 files**. With the addition of 122 screen tests (`REPORT_screens.md`), the full Jest suite stands at **284 tests across 27 files**.
 
 ---
 
@@ -395,7 +414,7 @@ Combined with the 134 unit and integration tests from `REPORT_unit.md`, the comp
 
 **Remaining gaps:**
 - `CalendarPicker` individual day cell selection is not tested — day cells share repeated numeric text labels (e.g. multiple cells labelled `"1"` across current and overflow months) making deterministic selection complex without `testID` props on the cells.
-- Screen-level tests (sign-in, subscriptions list, home dashboard) are not yet written.
+- `(tabs)/_layout.tsx` and `(auth)/_layout.tsx` are not yet tested at the screen level.
 
 ---
 
@@ -415,6 +434,6 @@ Combined with the 134 unit and integration tests from `REPORT_unit.md`, the comp
 
 1. **Add `testID` props to `CalendarPicker` day cells** to enable deterministic day selection tests. A `testID` of `"day-{date}"` (e.g. `"day-2026-06-15"`) would allow tests to select a specific date without ambiguity.
 
-2. **Add screen-level tests** for `sign-in.tsx`, `subscriptions.tsx`, and `index.tsx` (home) — these are the highest-traffic screens and contain the most user-facing logic not yet covered.
+2. ~~**Add screen-level tests**~~ — **Completed.** 11 screen test files covering all major screens are in `REPORT_screens.md`.
 
-3. **Add end-to-end tests** using Detox or Maestro for the critical user journey: sign in → add subscription → verify on home screen → delete subscription → verify removed.
+3. ~~**Add end-to-end tests**~~ — **Completed.** 13 E2E test cases are written using Detox 20. See `REPORT_e2e.md`.

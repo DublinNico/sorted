@@ -17,7 +17,7 @@
  */
 
 import { icons } from "@/constants/icons";
-import { colors } from "@/constants/theme";
+import { colors, withOpacity } from "@/constants/theme";
 import {
   formatCurrency,
   formatStatusLabel,
@@ -64,6 +64,7 @@ const SubscriptionCard = ({
   onPress,
   onCancelPress,
   onEditPress,
+  onMarkPaid,
 }: SubscriptionCardProps) => {
   // Stable testID slug derived from the subscription name.
   const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-');
@@ -97,12 +98,10 @@ const SubscriptionCard = ({
       testID={`subscription-card-${slug}`}
       onPress={onPress}
       style={{
-        backgroundColor: colors.card,           // #0F4D39 always
+        backgroundColor: colors.card,
         borderRadius: 16,
         padding: 16,
-        // Gold border highlights the card when it is open
-        borderWidth: 1,
-        borderColor: expanded ? colors.accent : "transparent",
+        ...(expanded ? { borderWidth: 1, borderColor: colors.accent } : {}),
       }}
     >
 
@@ -115,15 +114,13 @@ const SubscriptionCard = ({
             width: 56,
             height: 56,
             borderRadius: 14,
-            // Tint background with 20% opacity of the subscription colour
             backgroundColor: color ? color + "33" : colors.muted,
-            alignItems: "center",
-            justifyContent: "center",
+            overflow: "hidden",
           }}
         >
           <Image
             source={imgError ? icons.wallet : icon}
-            style={{ width: 36, height: 36, borderRadius: 8 }}
+            style={{ width: 56, height: 56 }}
             resizeMode="contain"
             onError={() => setImgError(true)}
           />
@@ -192,15 +189,36 @@ const SubscriptionCard = ({
           >
             {formatCurrency(price, currency)}
           </Text>
-          <Text
-            style={{
-              fontSize: 12,
-              color: colors.mutedForeground,
-              fontFamily: "sans-regular",
-            }}
-          >
-            {billing}
-          </Text>
+          {billing === "One-off" ? (
+            <View
+              style={{
+                paddingHorizontal: 8,
+                paddingVertical: 2,
+                borderRadius: 999,
+                backgroundColor: status === "paid" ? withOpacity(colors.successBright, 0.2) : withOpacity(colors.warning, 0.2),
+              }}
+            >
+              <Text
+                style={{
+                  fontSize: 11,
+                  fontFamily: "sans-semibold",
+                  color: status === "paid" ? colors.successBright : colors.warning,
+                }}
+              >
+                {status === "paid" ? "Paid" : "Unpaid"}
+              </Text>
+            </View>
+          ) : (
+            <Text
+              style={{
+                fontSize: 12,
+                color: colors.mutedForeground,
+                fontFamily: "sans-regular",
+              }}
+            >
+              {billing}
+            </Text>
+          )}
         </View>
       </View>
 
@@ -253,6 +271,25 @@ const SubscriptionCard = ({
             ) : null
           )}
 
+          {/* Mark as Paid button — only for unpaid one-off bills */}
+          {billing === "One-off" && status === "unpaid" && (
+            <TouchableOpacity
+              onPress={onMarkPaid}
+              activeOpacity={0.8}
+              style={{
+                marginTop: 6,
+                backgroundColor: colors.successBright,
+                borderRadius: 24,
+                paddingVertical: 14,
+                alignItems: "center",
+              }}
+            >
+              <Text style={{ fontSize: 16, color: colors.foreground, fontFamily: "sans-bold" }}>
+                Mark as Paid
+              </Text>
+            </TouchableOpacity>
+          )}
+
           {/* Edit button — outlined gold */}
           <TouchableOpacity
             onPress={onEditPress}
@@ -278,24 +315,26 @@ const SubscriptionCard = ({
             </Text>
           </TouchableOpacity>
 
-          {/* Delete button — destructive red */}
+          {/* Delete button — muted destructive */}
           <TouchableOpacity
             testID={`subscription-delete-${slug}`}
             onPress={onCancelPress}
             activeOpacity={0.8}
             style={{
               marginTop: 8,
-              backgroundColor: colors.destructive,
+              backgroundColor: colors.destructive + "33",
               borderRadius: 24,
               paddingVertical: 14,
               alignItems: "center",
+              borderWidth: 1,
+              borderColor: colors.destructive + "66",
             }}
           >
             <Text
               style={{
                 fontSize: 16,
-                color: colors.primary,
-                fontFamily: "sans-bold",
+                color: colors.destructive,
+                fontFamily: "sans-semibold",
               }}
             >
               Delete Subscription

@@ -189,7 +189,8 @@ function ForgotPasswordScreen({
         password: newPassword,
       });
       if (result.status === "complete") {
-        await finalize();
+        const { error: finalizeError } = await signIn.finalize();
+        if (finalizeError) setError(finalizeError.longMessage ?? finalizeError.message ?? "Failed to complete sign in.");
       } else {
         setError("Reset incomplete. Please try again.");
       }
@@ -498,7 +499,10 @@ export default function SignIn() {
       setErrorMessage(error.longMessage ?? error.message ?? "Invalid code.");
       return;
     }
-    if (signIn.status === "complete") await finalize();
+    if (signIn.status === "complete") {
+      await finalize();
+      if (email && password) await offerBiometrics(email, password);
+    }
   };
 
   if (showForgotPassword) {

@@ -92,6 +92,30 @@ Requires mocking the Supabase client.
 
 ## Priority 3 — Screen Tests (React Native Testing Library) ✅ Done
 
+### `app/(tabs)/settings.tsx` ✅ Done
+- [x] Renders "Settings" title
+- [x] Shows user's full name and email
+- [x] Shows two-letter initials; falls back to email initial or "?"
+- [x] Renders all four settings rows (Notifications, Payment Methods, Security, Help & Support)
+- [x] Shows active payment count and total monthly cost from the store
+- [x] Sign Out button triggers Clerk signOut
+
+### `app/security.tsx` ✅ Done
+- [x] Renders title and both section headers (CHANGE PASSWORD, SECURITY OPTIONS)
+- [x] Update Password button disabled when fields empty or new password < 8 chars
+- [x] Update Password button calls updatePassword with correct args when valid
+- [x] Biometric Login and Two-Factor Authentication rows are present
+- [x] Two-Factor shows "Coming soon" description
+- [x] Data Privacy section and Privacy Policy link render
+
+### `app/help-support.tsx` ✅ Done
+- [x] Renders screen title and FAQ section header
+- [x] All six FAQ questions render
+- [x] Email Support, Live Chat, and Documentation contact options render
+- [x] Tapping Email Support calls Linking.openURL with mailto
+- [x] Tapping Terms of Service and Privacy Policy links calls Linking.openURL with correct URLs
+- [x] App version and footer links render
+
 ### `app/(auth)/sign-in.tsx` ✅ Done
 - [x] Renders email and password fields on load
 - [x] Sign In button is disabled when fields are empty
@@ -182,7 +206,7 @@ Run: `deno test --allow-env supabase/functions/send-reminders/index.test.ts`
 
 | Layer | Files | Tested | % |
 |---|---|---|---|
-| Screens | 18 | 6 | ~33% |
+| Screens | 18 | 11 | ~61% |
 | Components | 7 | 5 | ~71% |
 | Services | 3 | 3 | 100% |
 | Utils | 7 | 4 | ~57% |
@@ -192,6 +216,6 @@ Run: `deno test --allow-env supabase/functions/send-reminders/index.test.ts`
 | Context | 1 | 0 | 0% |
 | Hooks | 1 | 0 | 0% |
 | Edge Function | 1 | 1 | 100% |
-| **Total** | **44** | **~23** | **~57%** |
+| **Total** | **44** | **27** | **~61%** |
 
-Priorities 1, 2, 3, 4, and 5 are complete. Coverage sits at approximately **57%**.
+Priorities 1, 2, 3, 4, and 5 are complete. Coverage sits at approximately **~61%**.

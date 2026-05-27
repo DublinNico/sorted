@@ -6,8 +6,8 @@
  * Layout (top → bottom):
  *   1. Title                — "Insights"
  *   2. Total Spending card  — gold card with live total + trend badge
- *   3. Spending Trend       — custom View-based bar chart (last 5 months)
- *   4. Category Breakdown   — segmented bar + legend list, derived from store
+ *   3. Category Breakdown   — donut chart + legend list, derived from store
+ *   4. Spending Trend       — horizontally scrollable bar chart, all 12 months
  *
  * No external chart library is used — all visuals are built with core
  * React Native View/Text primitives so no new dependencies are required.
@@ -27,6 +27,9 @@ import { useCallback, useMemo, useRef } from "react";
 import { Animated, Easing, ScrollView, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Svg, { Path } from "react-native-svg";
+
+// Fixed column width for the bar chart (px). 12 columns × 32 = 384 px total.
+const COL_W = 32;
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -56,144 +59,130 @@ const BAR_CHART_HEIGHT = 160;
 
 // ─── SpendingTrendChart ───────────────────────────────────────────────────────
 
+type TrendBar = {
+  month: string;
+  amount: number;
+  isCurrent: boolean;
+  isFuture: boolean;
+};
+
 /**
  * SpendingTrendChart
- * Animated bar chart with Y-axis labels and horizontal gridlines.
- * Bars grow from 0 to full height each time the Insights tab is focused.
- *
- * @param data  Array of { month, amount } objects (oldest → newest)
+ * Horizontally scrollable animated bar chart showing all 12 calendar months.
+ * Bars with no data are left blank. The current month uses a narrower bar
+ * to indicate the figure is live / not yet complete.
  */
-const SpendingTrendChart = ({ data }: { data: { month: string; amount: number }[] }) => {
+const SpendingTrendChart = ({ data }: { data: TrendBar[] }) => {
   const maxAmount = Math.max(...data.map((d) => d.amount), 1);
-
-  // Round up to nearest clean step so Y-axis labels are whole numbers.
-  const step  = Math.ceil(maxAmount / 4 / 100) * 100 || 100;
-  const yMax  = step * 4;
-  // Y-axis labels rendered top → bottom.
+  const step    = Math.ceil(maxAmount / 4 / 100) * 100 || 100;
+  const yMax    = step * 4;
   const yLabels = [yMax, step * 3, step * 2, step, 0];
 
-  // One Animated.Value per bar — persist across re-renders.
-  const animValues = useRef(data.map(() => new Animated.Value(0))).current;
+  // Always 12 animation values — one per calendar month.
+  const animValues = useRef(
+    Array.from({ length: 12 }, () => new Animated.Value(0))
+  ).current;
 
-  // Re-run the grow animation every time the Insights tab is focused.
   useFocusEffect(
     useCallback(() => {
       animValues.forEach((v) => v.setValue(0));
       Animated.parallel(
-        animValues.map((v, i) =>
-          Animated.timing(v, {
-            toValue:         1,
-            duration:        550,
-            delay:           i * 80,
+        data.map((d, i) =>
+          Animated.timing(animValues[i], {
+            toValue:         d.amount > 0 ? 1 : 0,
+            duration:        d.amount > 0 ? 550 : 0,
+            delay:           i * 60,
             easing:          Easing.out(Easing.cubic),
             useNativeDriver: false,
           })
         )
       ).start();
-    }, [])
+    }, [data, animValues])
   );
+
+  const totalW = 12 * COL_W;
 
   return (
     <View style={{ flexDirection: "row", gap: 8 }}>
 
-      {/* ── Y-axis labels ── */}
-      <View
-        style={{
-          width:           38,
-          height:          BAR_CHART_HEIGHT,
-          justifyContent:  "space-between",
-          alignItems:      "flex-end",
-        }}
-      >
+      {/* ── Y-axis (fixed) ── */}
+      <View style={{ width: 38, height: BAR_CHART_HEIGHT, justifyContent: "space-between", alignItems: "flex-end" }}>
         {yLabels.map((v) => (
-          <Text
-            key={`ylabel-${v}`}
-            style={{
-              fontSize:    10,
-              color:       colors.mutedForeground,
-              fontFamily:  "sans-regular",
-              lineHeight:  12,
-            }}
-          >
+          <Text key={`y-${v}`} style={{ fontSize: 10, color: colors.mutedForeground, fontFamily: "sans-regular", lineHeight: 12 }}>
             {v}
           </Text>
         ))}
       </View>
 
-      {/* ── Chart area + month labels ── */}
-      <View style={{ flex: 1 }}>
+      {/* ── Scrollable bars + labels ── */}
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flex: 1 }}>
+        <View>
 
-        {/* Bars layered on top of horizontal gridlines */}
-        <View style={{ height: BAR_CHART_HEIGHT, position: "relative" }}>
+          {/* Bar drawing area */}
+          <View style={{ height: BAR_CHART_HEIGHT, width: totalW, position: "relative" }}>
 
-          {/* Gridlines — one per Y label, evenly spaced top → bottom */}
-          {yLabels.map((v, i) => (
-            <View
-              key={`grid-${v}`}
-              style={{
-                position:        "absolute",
-                left:            0,
-                right:           0,
-                top:             (i / (yLabels.length - 1)) * (BAR_CHART_HEIGHT - 1),
-                height:          1,
-                backgroundColor: colors.border + "55",
-              }}
-            />
-          ))}
-
-          {/* Animated bars */}
-          <View
-            style={{
-              flexDirection:  "row",
-              alignItems:     "flex-end",
-              height:         "100%",
-              gap:            6,
-            }}
-          >
-            {data.map((d, i) => {
-              const targetH = Math.max(4, (d.amount / yMax) * BAR_CHART_HEIGHT);
-              const animH   = animValues[i].interpolate({
-                inputRange:  [0, 1],
-                outputRange: [0, targetH],
-              });
-
-              return (
-                <View
-                  key={`bar-${i}`}
-                  style={{ flex: 1, alignItems: "center", justifyContent: "flex-end", height: "100%" }}
-                >
-                  <Animated.View
-                    style={{
-                      width:                "78%",
-                      height:               animH,
-                      backgroundColor:      colors.accent,
-                      borderTopLeftRadius:  6,
-                      borderTopRightRadius: 6,
-                    }}
-                  />
-                </View>
-              );
-            })}
-          </View>
-        </View>
-
-        {/* Month labels */}
-        <View style={{ flexDirection: "row", marginTop: 8 }}>
-          {data.map((d, i) => (
-            <View key={`label-${i}`} style={{ flex: 1, alignItems: "center" }}>
-              <Text
+            {/* Gridlines */}
+            {yLabels.map((v, i) => (
+              <View
+                key={`grid-${v}`}
                 style={{
-                  fontSize:   12,
-                  color:      colors.mutedForeground,
-                  fontFamily: "sans-regular",
+                  position:        "absolute",
+                  left:            0,
+                  width:           totalW,
+                  top:             (i / (yLabels.length - 1)) * (BAR_CHART_HEIGHT - 1),
+                  height:          1,
+                  backgroundColor: colors.border + "55",
                 }}
-              >
-                {d.month}
-              </Text>
+              />
+            ))}
+
+            {/* Animated bars */}
+            <View style={{ flexDirection: "row", alignItems: "flex-end", height: "100%" }}>
+              {data.map((d, i) => {
+                const targetH  = d.amount > 0 ? Math.max(4, (d.amount / yMax) * BAR_CHART_HEIGHT) : 0;
+                const animH    = animValues[i].interpolate({ inputRange: [0, 1], outputRange: [0, targetH] });
+                // Current month: thin bar (35 % of col); past/no-data: standard (70 %)
+                const barPct   = d.isCurrent ? "35%" : "70%";
+                const barColor = d.isCurrent ? colors.accent + "99" : colors.accent;
+
+                return (
+                  <View key={`col-${i}`} style={{ width: COL_W, alignItems: "center", justifyContent: "flex-end", height: "100%" }}>
+                    {!d.isFuture && d.amount > 0 && (
+                      <Animated.View
+                        style={{
+                          width:                barPct,
+                          height:               animH,
+                          backgroundColor:      barColor,
+                          borderTopLeftRadius:  5,
+                          borderTopRightRadius: 5,
+                        }}
+                      />
+                    )}
+                  </View>
+                );
+              })}
             </View>
-          ))}
+          </View>
+
+          {/* Month labels */}
+          <View style={{ flexDirection: "row", marginTop: 6, width: totalW }}>
+            {data.map((d, i) => (
+              <View key={`lbl-${i}`} style={{ width: COL_W, alignItems: "center" }}>
+                <Text
+                  style={{
+                    fontSize:   10,
+                    color:      d.isCurrent ? colors.accent : colors.mutedForeground,
+                    fontFamily: d.isCurrent ? "sans-semibold" : "sans-regular",
+                  }}
+                >
+                  {d.month}
+                </Text>
+              </View>
+            ))}
+          </View>
+
         </View>
-      </View>
+      </ScrollView>
     </View>
   );
 };
@@ -381,16 +370,27 @@ const InsightsScreen = () => {
 
   // ── Derived values ──────────────────────────────────────────────────────────
 
-  /** Total of all subscription prices. */
-  const totalMonthly = subscriptions.reduce((sum, s) => sum + s.price, 0);
+  /** Total of recurring (non-one-off) subscription prices. */
+  const totalMonthly = subscriptions
+    .filter((s) => s.billing !== "One-off")
+    .reduce((sum, s) => sum + s.price, 0);
 
-  /** Bar chart data derived from real snapshots. */
-  const trendData = useMemo(() =>
-    monthlySnapshots.map((s) => ({
-      month: MONTH_NAMES[s.month - 1],
-      amount: s.totalAmount,
-    })),
-  [monthlySnapshots]);
+  /** Full 12-month bar chart data. Past months use stored snapshots; the
+   *  current month uses the live store total; future months are left blank. */
+  const trendData = useMemo((): TrendBar[] => {
+    const now          = new Date();
+    const currentMonth = now.getMonth() + 1; // 1–12
+    return Array.from({ length: 12 }, (_, i) => {
+      const month   = i + 1;
+      const snap    = monthlySnapshots.find((s) => s.month === month);
+      const isCurrent = month === currentMonth;
+      const isFuture  = month > currentMonth;
+      const amount    = isCurrent
+        ? totalMonthly
+        : snap?.totalAmount ?? 0;
+      return { month: MONTH_NAMES[i], amount, isCurrent, isFuture };
+    });
+  }, [monthlySnapshots, totalMonthly]);
 
   /** Percentage change vs the previous month's real snapshot. */
   const trendLabel = useMemo(() => {
@@ -511,7 +511,7 @@ const InsightsScreen = () => {
           )}
         </View>
 
-        {/* ── Spending Trend card ─────────────────────────────────────────── */}
+        {/* ── Category Breakdown card ─────────────────────────────────────── */}
         <View
           style={{
             backgroundColor: colors.card,
@@ -528,19 +528,26 @@ const InsightsScreen = () => {
               marginBottom: 20,
             }}
           >
-            Spending Trend
+            Category Breakdown
           </Text>
 
-          {trendData.length === 0 ? (
-            <Text style={{ fontSize: 14, color: colors.mutedForeground, fontFamily: "sans-regular", paddingVertical: 8 }}>
-              Your spending history will appear here once data has been recorded.
+          {categoryData.length === 0 ? (
+            <Text
+              style={{
+                fontSize: 14,
+                color: colors.mutedForeground,
+                fontFamily: "sans-regular",
+                paddingVertical: 8,
+              }}
+            >
+              Add subscriptions to see a breakdown.
             </Text>
           ) : (
-            <SpendingTrendChart data={trendData} />
+            <CategoryBreakdown data={categoryData} />
           )}
         </View>
 
-        {/* ── Category Breakdown card ─────────────────────────────────────── */}
+        {/* ── Spending Trend card ─────────────────────────────────────────── */}
         <View
           style={{
             backgroundColor: colors.card,
@@ -556,24 +563,9 @@ const InsightsScreen = () => {
               marginBottom: 20,
             }}
           >
-            Category Breakdown
+            Spending Trend
           </Text>
-
-          {categoryData.length === 0 ? (
-            // Empty state — no subscriptions in the store yet
-            <Text
-              style={{
-                fontSize: 14,
-                color: colors.mutedForeground,
-                fontFamily: "sans-regular",
-                paddingVertical: 8,
-              }}
-            >
-              Add subscriptions to see a breakdown.
-            </Text>
-          ) : (
-            <CategoryBreakdown data={categoryData} />
-          )}
+          <SpendingTrendChart data={trendData} />
         </View>
 
       </ScrollView>

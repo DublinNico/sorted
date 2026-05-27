@@ -17,6 +17,8 @@ export const colors = {
   accent: "#C9A84C",                        // Gold — buttons, active states, highlights
   border: "rgba(245, 240, 232, 0.1)",       // Subtle cream border on dark surfaces
   success: "#16a34a",                       // Green — success states
+  successBright: "#22c55e",                 // Bright green — paid/success badge
+  warning: "#f97316",                       // Orange — unpaid/warning badge
   destructive: "#d4183d",                   // Red — destructive actions (delete, error)
   subscription: "#1a5c46",                  // Slightly lighter green — expanded card background
 } as const;

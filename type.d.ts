@@ -34,6 +34,7 @@ declare global {
         onPress: () => void;
         onCancelPress?: () => void;
         onEditPress?: () => void;
+        onMarkPaid?: () => void;
         isCancelling?: boolean;
     }
 
