@@ -18,7 +18,7 @@ import { createSubscription as createSubscriptionService } from "@/services/subs
 import { upsertMonthlySnapshot } from "@/services/monthlySnapshots";
 import { useAuth } from "@clerk/expo";
 import { Ionicons } from "@expo/vector-icons";
-import type { BottomTabBarProps } from "@react-navigation/bottom-tabs";
+import type { BottomTabBarProps } from "expo-router/tabs";
 import { Tabs } from "expo-router";
 import { useState } from "react";
 import { Pressable, Text, View } from "react-native";
@@ -66,7 +66,7 @@ type CustomTabBarProps = BottomTabBarProps & {
  * Inactive tab: muted-cream icon + muted-cream label + medium weight.
  * FAB: 56×56 gold circle, elevated 20px above the bar via negative marginTop.
  */
-const CustomTabBar = ({ state, navigation, onAddPress }: CustomTabBarProps) => {
+const CustomTabBar = ({ state, navigateToTab, onAddPress }: CustomTabBarProps) => {
   const insets = useSafeAreaInsets();
 
   // Name of the currently active route — used to determine the focused tab.
@@ -129,7 +129,10 @@ const CustomTabBar = ({ state, navigation, onAddPress }: CustomTabBarProps) => {
         return (
           <Pressable
             key={slot.routeName}
-            onPress={() => navigation.navigate(slot.routeName)}
+            onPress={() => {
+              const route = state.routes.find((r) => r.name === slot.routeName);
+              if (route) navigateToTab(route.key);
+            }}
             style={{
               flex: 1,
               alignItems: "center",
@@ -199,7 +202,7 @@ const TabLayout = () => {
       <Tabs
         screenOptions={{
           headerShown: false,
-          sceneContainerStyle: { backgroundColor: colors.background },
+          sceneStyle: { backgroundColor: colors.background },
         }}
         tabBar={(props) => (
           <CustomTabBar {...props} onAddPress={() => setModalVisible(true)} />

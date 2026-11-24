@@ -1,13 +1,14 @@
 import "@/global.css";
 import { colors } from "@/constants/theme";
 import { setBackgroundColorAsync } from "expo-system-ui";
-import { ThemeProvider, DarkTheme } from "@react-navigation/native";
+import { ThemeProvider, DarkTheme } from "expo-router";
 import { ClerkProvider, useAuth, useUser } from "@clerk/expo";
 import { tokenCache } from "@clerk/expo/token-cache";
 import { SplashScreen, Stack, useRouter, useSegments, usePathname } from "expo-router";
 import { useFonts } from "expo-font";
 import { useEffect, useState } from "react";
-import { PostHogProvider, usePostHog } from "posthog-react-native";
+import { PostHogProvider } from "posthog-react-native";
+import { posthogEnabled, useAnalytics } from "@/lib/analytics";
 import AppSplashScreen from "@/components/AppSplashScreen";
 import { useSupabase } from "@/hooks/useSupabase";
 import { fetchSubscriptions } from "@/services/subscriptions";
@@ -36,8 +37,6 @@ const AppTheme = {
 const posthogKey = process.env.EXPO_PUBLIC_POSTHOG_KEY;
 const posthogHost = process.env.EXPO_PUBLIC_POSTHOG_HOST;
 
-if (!posthogKey) throw new Error("Missing EXPO_PUBLIC_POSTHOG_KEY in your .env file");
-if (!posthogHost) throw new Error("Missing EXPO_PUBLIC_POSTHOG_HOST in your .env file");
 
 const publishableKey = process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY!;
 
@@ -52,16 +51,16 @@ configureNotificationHandler();
 
 function ScreenTracker() {
   const pathname = usePathname();
-  const posthog = usePostHog();
+  const posthog = useAnalytics();
   const { user } = useUser();
 
   useEffect(() => {
-    posthog.screen(pathname);
+    posthog?.screen(pathname);
   }, [pathname]);
 
   useEffect(() => {
     if (user) {
-      posthog.identify(user.id, {
+      posthog?.identify(user.id, {
         email: user.primaryEmailAddress?.emailAddress ?? null,
         name: user.fullName ?? null,
       });
@@ -179,13 +178,19 @@ export default function RootLayout() {
 
   if (!ready) return <AppSplashScreen />;
 
+  const app = (
+    <ClerkProvider publishableKey={publishableKey} tokenCache={tokenCache}>
+      {posthogEnabled && <ScreenTracker />}
+      <DataLoader />
+      <InitialLayout />
+    </ClerkProvider>
+  );
+
+  if (!posthogEnabled) return app;
+
   return (
-    <PostHogProvider apiKey={posthogKey} options={{ host: posthogHost }}>
-      <ClerkProvider publishableKey={publishableKey} tokenCache={tokenCache}>
-        <ScreenTracker />
-        <DataLoader />
-        <InitialLayout />
-      </ClerkProvider>
+    <PostHogProvider apiKey={posthogKey!} options={{ host: posthogHost ?? "https://eu.i.posthog.com" }}>
+      {app}
     </PostHogProvider>
   );
 }

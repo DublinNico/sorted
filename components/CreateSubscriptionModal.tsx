@@ -37,7 +37,7 @@ import { getDomain } from "@/utils/domainUtils";
 import { Ionicons } from "@expo/vector-icons";
 import clsx from "clsx";
 import dayjs from "dayjs";
-import { usePostHog } from "posthog-react-native";
+import { useAnalytics } from "@/lib/analytics";
 import React, { useEffect, useState } from "react";
 import {
   Image,
@@ -216,7 +216,7 @@ const CreateSubscriptionModal = ({
   const [nextPaymentDate,  setNextPaymentDate]  = useState("");
   const [showCalendar,     setShowCalendar]     = useState(false);
 
-  const posthog     = usePostHog();
+  const posthog     = useAnalytics();
   const parsedPrice = parseFloat(price);
 
   const [previewImgError, setPreviewImgError] = useState(false);
@@ -345,7 +345,7 @@ const CreateSubscriptionModal = ({
 
     onSubmit(payload);
 
-    posthog.capture("subscription_created", {
+    posthog?.capture("subscription_created", {
       name:      payload.name,
       price:     payload.price,
       frequency: payload.frequency ?? null,

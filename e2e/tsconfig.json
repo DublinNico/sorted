@@ -1,8 +1,16 @@
 {
   "extends": "../tsconfig.json",
   "compilerOptions": {
-    "types": ["detox", "jest", "node"],
+    "types": [
+      "detox",
+      "jest",
+      "node"
+    ],
     "noEmit": true
   },
-  "include": ["tests/**/*.ts", "tests/**/*.tsx"]
+  "include": [
+    "tests/**/*.ts",
+    "tests/**/*.tsx"
+  ],
+  "exclude": []
 }

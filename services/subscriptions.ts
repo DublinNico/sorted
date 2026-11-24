@@ -41,7 +41,7 @@ export function subscriptionToRow(
   sub: Omit<Subscription, "id">,
   userId: string,
   id?: string
-): Omit<SubscriptionRow, "user_id"> & { user_id: string; id?: string } {
+): Omit<SubscriptionRow, "user_id" | "id"> & { user_id: string; id?: string } {
   const iconUri =
     typeof sub.icon === "object" && "uri" in sub.icon
       ? (sub.icon as { uri: string }).uri

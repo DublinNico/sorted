@@ -170,7 +170,16 @@ function ForgotPasswordScreen({
     setError("");
     setLoading(true);
     try {
-      await signIn.create({ strategy: "reset_password_email_code", identifier: resetEmail });
+      const { error: createError } = await signIn.create({ identifier: resetEmail });
+      if (createError) {
+        setError(createError.longMessage ?? createError.message ?? "Failed to send reset code.");
+        return;
+      }
+      const { error: sendError } = await signIn.resetPasswordEmailCode.sendCode();
+      if (sendError) {
+        setError(sendError.longMessage ?? sendError.message ?? "Failed to send reset code.");
+        return;
+      }
       setStep("verify");
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Failed to send reset code.");
@@ -183,12 +192,17 @@ function ForgotPasswordScreen({
     setError("");
     setLoading(true);
     try {
-      const result = await signIn.attemptFirstFactor({
-        strategy: "reset_password_email_code",
-        code,
-        password: newPassword,
-      });
-      if (result.status === "complete") {
+      const { error: verifyError } = await signIn.resetPasswordEmailCode.verifyCode({ code });
+      if (verifyError) {
+        setError(verifyError.longMessage ?? verifyError.message ?? "Invalid reset code.");
+        return;
+      }
+      const { error: submitError } = await signIn.resetPasswordEmailCode.submitPassword({ password: newPassword });
+      if (submitError) {
+        setError(submitError.longMessage ?? submitError.message ?? "Failed to reset password.");
+        return;
+      }
+      if (signIn.status === "complete") {
         const { error: finalizeError } = await signIn.finalize();
         if (finalizeError) setError(finalizeError.longMessage ?? finalizeError.message ?? "Failed to complete sign in.");
       } else {

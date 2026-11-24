@@ -5,7 +5,10 @@
     "allowJs": true,
     "esModuleInterop": true,
     "jsx": "react-native",
-    "lib": ["DOM", "ESNext"],
+    "lib": [
+      "DOM",
+      "ESNext"
+    ],
     "module": "preserve",
     "moduleDetection": "force",
     "moduleResolution": "bundler",
@@ -17,7 +20,11 @@
       "@/*": [
         "./*"
       ]
-    }
+    },
+    "types": [
+      "jest",
+      "node"
+    ]
   },
   "include": [
     "**/*.ts",
@@ -27,6 +34,9 @@
     "nativewind-env.d.ts"
   ],
   "exclude": [
-    "app-example"
+    "app-example",
+    "e2e",
+    "node_modules",
+    "supabase/functions"
   ]
 }
